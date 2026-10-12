@@ -1,7 +1,30 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101828"><link rel="manifest" href="manifest.json"><link rel="stylesheet" href="styles.css"><title>Rádio Trânsito SP</title></head><body><main><header><span class="badge">● NO AR</span><h1>📻 Rádio Trânsito SP</h1><p>Informação, histórias e acontecimentos que marcaram gerações.</p></header>
-<section class="card"><small>TOCANDO AGORA</small><h2 id="track">Pronto para ouvir</h2><p id="artist"></p><div class="controls"><button id="prev">⏮</button><button id="play">▶ Ouvir</button><button id="next">⏭</button></div><p id="player-status" class="muted">Aperte Ouvir para iniciar.</p><audio id="audio" preload="metadata"></audio></section>
-<section class="card"><h2>🎙️ Programação</h2><p><strong>Histórias que Marcaram:</strong> Maníaco do Parque e Carandiru.</p><p>Ao terminar cada podcast, entram a identificação da rádio e duas faixas instrumentais. Depois, a programação segue para o próximo episódio.</p></section>
-<section class="card"><h2>🚗 Boletim de trânsito</h2><p id="traffic-status" class="muted">Aguardando conexão com a fonte oficial.</p><p id="traffic">Nenhum boletim automático de trânsito está conectado no momento.</p><button id="speak">🔊 Transmitir boletim</button><button id="refresh">↻ Atualizar</button><p class="muted">Estrutura preparada para consultar a fonte a cada 15 minutos. Quando houver dados válidos, a programação pausa, toca a vinheta de trânsito, transmite o boletim, toca a vinheta de retorno e continua do ponto em que parou.</p></section>
-<section class="card"><h2>⚙️ Fonte de boletins</h2><p>Quando a integração oficial estiver pronta, informe aqui o endereço HTTPS do Worker/JSON. Nunca coloque a chave privada da ARTESP no site.</p><input id="feed" type="url" placeholder="https://seu-worker/boletins" aria-label="URL JSON de boletins"><button id="save">Salvar fonte</button><p id="feed-status" class="muted"></p></section>
-<section class="card"><h2>🎵 Faixas instrumentais</h2><ul><li>Instrumental Retrô 80 — composição original</li><li>Instrumental Pop 90 — composição original</li></ul><p class="muted">Faixas originais incluídas no pacote, sem dependência de servidores externos.</p></section>
-<footer>Projeto experimental • Rádio Trânsito SP • não é um serviço oficial de trânsito</footer></main><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101d">
+<link rel="manifest" href="manifest.json"><link rel="stylesheet" href="styles.css"><title>Rádio Trânsito SP — Ao Vivo</title>
+</head>
+<body>
+<div class="ambient a1"></div><div class="ambient a2"></div>
+<header class="topbar"><div class="brand"><div class="logo">RT</div><div><strong>RÁDIO TRÂNSITO <i>SP</i></strong><span>INFORMAÇÃO • HISTÓRIAS • SÃO PAULO</span></div></div><div class="live"><b></b> AO VIVO</div></header>
+<main>
+<section class="hero">
+  <div class="hero-copy"><div class="eyebrow"><span>●</span> PROGRAMAÇÃO 24H</div><h1>São Paulo em movimento.<br><em>Histórias no ar.</em></h1><p>Informação, histórias e acontecimentos que marcaram gerações. Uma programação contínua feita para acompanhar o seu caminho.</p></div>
+  <div class="onair-card">
+    <div class="cover"><div class="signal"><i></i><i></i><i></i><i></i><i></i></div><div class="cover-logo">RT<span>SP</span></div><small>RÁDIO TRÂNSITO</small></div>
+    <div class="now"><div class="now-label"><b></b> TOCANDO AGORA</div><h2 id="track">Rádio Trânsito SP</h2><p id="artist">Programação ao vivo</p><div class="progress"><div id="progress"></div></div><div class="times"><span id="elapsed">0:00</span><span id="duration">--:--</span></div>
+      <div class="player-actions"><button class="round" id="prev" aria-label="Anterior">‹</button><button class="listen" id="play"><span>▶</span> OUVIR AO VIVO</button><button class="round" id="next" aria-label="Próximo">›</button></div><p id="player-status" class="status">Toque em “Ouvir ao vivo” para entrar na programação.</p>
+    </div><audio id="audio" preload="metadata"></audio>
+  </div>
+</section>
+<section class="ticker"><div class="ticker-label">TRÂNSITO SP</div><div class="ticker-body"><span class="dot"></span><span id="traffic">Integração com os boletins oficiais em preparação.</span></div><div class="clock" id="clock">--:--</div></section>
+<section class="grid">
+  <article class="panel schedule"><div class="panel-head"><div><span class="kicker">NA PROGRAMAÇÃO</span><h3>Histórias que Marcaram</h3></div><span class="mic">◉</span></div><div class="episode"><span class="num">01</span><div><b>Maníaco do Parque</b><small>Era psicopata ou doente?</small></div><span>DOCUMENTAL</span></div><div class="episode"><span class="num">02</span><div><b>Carandiru</b><small>Do massacre ao indulto</small></div><span>DOCUMENTAL</span></div><div class="music-strip"><b>♫</b><div><strong>ENTRE OS PROGRAMAS</strong><span>2 instrumentais retrô • anos 80 & 90</span></div></div></article>
+  <article class="panel next"><span class="kicker">A SEGUIR</span><div class="next-art">♫</div><h3 id="next-title">Programação Rádio Trânsito SP</h3><p id="next-type">A programação continua automaticamente.</p><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+</section>
+<section class="traffic-card"><div class="traffic-icon">↗</div><div><span class="kicker">BOLETIM DE TRÂNSITO</span><h3>Informação no caminho, sem interromper sua experiência.</h3><p id="traffic-status">Aguardando liberação da fonte oficial de dados. Quando ativa, a rádio pausa, transmite o boletim e retoma exatamente do ponto em que estava.</p></div><button id="speak" class="ghost">TESTAR BOLETIM</button><button id="refresh" class="ghost mini">↻</button></section>
+<details class="settings"><summary>Configuração da fonte de trânsito</summary><div><p>Área administrativa. A chave privada da ARTESP nunca deve ser colocada neste site.</p><input id="feed" type="url" placeholder="https://seu-worker/boletins"><button id="save">SALVAR FONTE</button><p id="feed-status" class="status"></p></div></details>
+</main>
+<footer><div class="brand foot"><div class="logo">RT</div><strong>RÁDIO TRÂNSITO SP</strong></div><p>Projeto experimental independente • não é um serviço oficial de trânsito</p></footer>
+<script src="app.js"></script>
+</body></html>

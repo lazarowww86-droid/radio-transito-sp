@@ -15,13 +15,13 @@ const playlist=[
  {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
 ];
 let idx=0,active=false,items=[],updated=null,interrupted=null;
-function load(i=idx){idx=(i+playlist.length)%playlist.length;const t=playlist[idx];$('track').textContent=t.title;$('artist').textContent=t.artist;audio.src=t.src;audio.load();const upcoming=playlist[(idx+1)%playlist.length];if(upcoming.type==='vinheta'||upcoming.type==='music'){const l=document.createElement('link');l.rel='prefetch';l.as='audio';l.href=upcoming.src;document.head.appendChild(l);setTimeout(()=>l.remove(),60000)}$('player-status').textContent=t.type==='podcast'?'Podcast':'Programação da Rádio Trânsito SP';}
+function load(i=idx){idx=(i+playlist.length)%playlist.length;const t=playlist[idx];$('track').textContent=t.title;$('artist').textContent=t.artist;audio.src=t.src;audio.load();const upcoming=playlist[(idx+1)%playlist.length];if(upcoming.type==='vinheta'||upcoming.type==='music'){const l=document.createElement('link');l.rel='prefetch';l.as='audio';l.href=upcoming.src;document.head.appendChild(l);setTimeout(()=>l.remove(),60000)}$('player-status').textContent=active?'NO AR • programação contínua':'Toque em “Ouvir ao vivo” para entrar na programação.';if($('next-title'))$('next-title').textContent=upcoming.title;if($('next-type'))$('next-type').textContent=upcoming.type==='podcast'?'Podcast • Histórias que Marcaram':upcoming.type==='music'?'Faixa instrumental • programação musical':'Identificação da Rádio Trânsito SP';}
 function play(){active=true;audio.play().catch(()=>{$('player-status').textContent='Toque em Ouvir para liberar o áudio neste navegador.';});}
 function change(n){load(idx+n);if(active)play();}
 $('play').onclick=()=>{if(audio.paused){play()}else{audio.pause();active=false}};
 $('next').onclick=()=>change(1);$('prev').onclick=()=>change(-1);
-audio.onplay=()=>{$('play').textContent='⏸ Pausar';active=true};
-audio.onpause=()=>{$('play').textContent='▶ Ouvir'};
+audio.onplay=()=>{$('play').innerHTML='<span>❚❚</span> NO AR';active=true;$('player-status').textContent='NO AR • programação contínua'};
+audio.onpause=()=>{$('play').innerHTML='<span>▶</span> OUVIR AO VIVO';if(active===false)$('player-status').textContent='Toque em “Ouvir ao vivo” para entrar na programação.'};
 audio.onended=()=>{if(interrupted)return;idx=(idx+1)%playlist.length;load();play()};
 let skips=0;audio.onerror=()=>{if(interrupted)return;$('player-status').textContent='Áudio indisponível; avançando.';if(++skips<playlist.length)setTimeout(()=>change(1),250);else{active=false;$('player-status').textContent='Não foi possível carregar a programação. Verifique se a pasta media foi enviada.'}};audio.oncanplay=()=>{skips=0};
 load();
@@ -35,3 +35,5 @@ async function trafficBulletin(){if(!items.length){report();return}if(interrupte
 function resume(){const s=interrupted;interrupted=null;if(!s)return;load(s.idx);audio.addEventListener('loadedmetadata',function once(){audio.removeEventListener('loadedmetadata',once);audio.currentTime=Math.min(s.time,audio.duration||s.time);if(s.wasPlaying)play()})}
 $('speak').onclick=trafficBulletin;$('refresh').onclick=refresh;refresh();setInterval(async()=>{await refresh();if(items.length)trafficBulletin()},15*60*1000);
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+function fmt(t){if(!Number.isFinite(t))return '--:--';const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+String(s).padStart(2,'0')}audio.addEventListener('timeupdate',()=>{if($('elapsed'))$('elapsed').textContent=fmt(audio.currentTime);if($('duration'))$('duration').textContent=fmt(audio.duration);if($('progress'))$('progress').style.width=(audio.duration?audio.currentTime/audio.duration*100:0)+'%'});audio.addEventListener('loadedmetadata',()=>{if($('duration'))$('duration').textContent=fmt(audio.duration)});function tick(){if($('clock'))$('clock').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}tick();setInterval(tick,1000);
