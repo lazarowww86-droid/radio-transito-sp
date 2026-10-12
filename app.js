@@ -34,6 +34,48 @@ async function refresh(){const url=localStorage.getItem('radio_feed');if(!url){i
 async function trafficBulletin(){if(!items.length){report();return}if(interrupted)return;interrupted={idx,time:audio.currentTime,wasPlaying:!audio.paused};audio.pause();const sting=new Audio('media/vinheta-transito-mix.mp3');sting.onended=()=>{const u=new SpeechSynthesisUtterance(items.slice(0,6).join('. '));u.lang='pt-BR';u.rate=1;u.onend=u.onerror=()=>{const back=new Audio('media/vinheta-retorno-mix.mp3');back.onended=resume;back.play().catch(resume)};speechSynthesis.cancel();speechSynthesis.speak(u)};sting.play().catch(()=>{interrupted=null})}
 function resume(){const s=interrupted;interrupted=null;if(!s)return;load(s.idx);audio.addEventListener('loadedmetadata',function once(){audio.removeEventListener('loadedmetadata',once);audio.currentTime=Math.min(s.time,audio.duration||s.time);if(s.wasPlaying)play()})}
 $('speak').onclick=trafficBulletin;$('refresh').onclick=refresh;refresh();setInterval(async()=>{await refresh();if(items.length)trafficBulletin()},15*60*1000);
+
+
+// Hora certa: entra a cada 10 minutos, pausa a programação e depois retoma do mesmo ponto.
+let lastTimeSlot='';
+function timeText(d=new Date()){
+  const h=d.getHours(),m=d.getMinutes();
+  if(m===0) return `Rádio Trânsito SP. Agora, ${h} ${h===1?'hora':'horas'}.`;
+  return `Rádio Trânsito SP. Agora, ${h} ${h===1?'hora':'horas'} e ${m} minutos.`;
+}
+function resumeProgram(s){
+  interrupted=null;
+  if(!s)return;
+  load(s.idx);
+  audio.addEventListener('loadedmetadata',function once(){
+    audio.removeEventListener('loadedmetadata',once);
+    audio.currentTime=Math.min(s.time,audio.duration||s.time);
+    if(s.wasPlaying)play();
+  });
+}
+function announceTime(){
+  if(!active||audio.paused||interrupted)return;
+  const s={idx,time:audio.currentTime,wasPlaying:true};
+  interrupted=s;
+  audio.pause();
+  const u=new SpeechSynthesisUtterance(timeText());
+  u.lang='pt-BR';u.rate=1;u.pitch=1;
+  u.onend=u.onerror=()=>resumeProgram(s);
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+function checkTimeAnnouncement(){
+  const d=new Date(),m=d.getMinutes();
+  if(m%10!==0)return;
+  const slot=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}-${m}`;
+  if(slot===lastTimeSlot)return;
+  lastTimeSlot=slot;
+  // Se houver boletim de trânsito no mesmo minuto, ele tem prioridade; a hora entra no próximo ciclo.
+  if(interrupted)return;
+  announceTime();
+}
+setInterval(checkTimeAnnouncement,5000);
+
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 
 function fmt(t){if(!Number.isFinite(t))return '--:--';const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+String(s).padStart(2,'0')}audio.addEventListener('timeupdate',()=>{if($('elapsed'))$('elapsed').textContent=fmt(audio.currentTime);if($('duration'))$('duration').textContent=fmt(audio.duration);if($('progress'))$('progress').style.width=(audio.duration?audio.currentTime/audio.duration*100:0)+'%'});audio.addEventListener('loadedmetadata',()=>{if($('duration'))$('duration').textContent=fmt(audio.duration)});function tick(){if($('clock'))$('clock').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}tick();setInterval(tick,1000);
