@@ -1,12 +1,11 @@
-RÁDIO TRÂNSITO SP — PACOTE COMPLETO
+RÁDIO TRÂNSITO SP — VERSÃO CORRIGIDA
 
-Inclui:
-- 2 podcasts enviados pelo usuário;
-- 4 vinhetas da Rádio Trânsito SP;
-- 2 instrumentais CC0 já usados na versão anterior (GameBGM e Thoughtness), carregados do Wikimedia Commons;
-- sequência automática: podcast -> vinheta -> música 1 -> música 2 -> vinheta -> próximo podcast;
-- estrutura de boletim de trânsito a cada 15 minutos;
-- interrupção preparada: pausa -> vinheta de trânsito -> locução -> vinheta de retorno -> retoma do mesmo ponto;
-- chave da ARTESP NÃO fica no frontend.
+Envie TODOS os arquivos e a pasta media para a raiz do repositório radio-transito-sp no GitHub. Substitua app.js, index.html e sw.js. Remova as antigas vinhetas .mp4, se desejar.
 
-Para publicar no GitHub Pages, envie todos os arquivos e a pasta media mantendo a estrutura.
+Correção: as vinhetas antigas eram MP4 com vídeo de ~61 segundos, embora o áudio durasse apenas 3–5 segundos. Isso causava longos silêncios. Agora são MP3 curtos com cama musical integrada.
+
+As duas instrumentais incluídas são composições digitais simples e originais com referências estéticas aos anos 80/90. Não são gravações de músicas famosas nem as faixas anteriores.
+
+Sem GameBGM. Sem dependência externa para músicas.
+
+A fonte ARTESP continua pendente; não há boletim oficial ativo até configurar feed válido.
