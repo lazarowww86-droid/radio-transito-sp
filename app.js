@@ -18,19 +18,27 @@ const playlist=[
  {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
  {type:'music',title:'Instrumental Retrô 80',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-retro-80.mp3'},
  {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
+ {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
+ {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3'},
+ {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
+ {type:'music',title:'Instrumental Retrô 80',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-retro-80.mp3'},
+ {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
 ];
 let idx=0,active=false,items=[],updated=null,interrupted=null;
-let nextPreloader=null;
-function preloadNext(){
+const mediaCache=new Map();
+let preloadToken=0;
+async function preloadNext(){
   const upcoming=playlist[(idx+1)%playlist.length];
-  if(!upcoming)return;
-  if(nextPreloader){nextPreloader.src='';nextPreloader.load();}
-  nextPreloader=new Audio();
-  nextPreloader.preload='auto';
-  nextPreloader.src=upcoming.src;
-  nextPreloader.load();
+  if(!upcoming||mediaCache.has(upcoming.src))return;
+  const token=++preloadToken;
+  try{
+    const r=await fetch(upcoming.src,{cache:'force-cache'});
+    if(!r.ok)throw Error('HTTP '+r.status);
+    const blob=await r.blob();
+    if(token<=preloadToken&&!mediaCache.has(upcoming.src))mediaCache.set(upcoming.src,URL.createObjectURL(blob));
+  }catch(e){ /* fallback normal do navegador */ }
 }
-function load(i=idx){idx=(i+playlist.length)%playlist.length;const t=playlist[idx];$('track').textContent=t.title;$('artist').textContent=t.artist;audio.preload='auto';audio.src=t.src;audio.load();const upcoming=playlist[(idx+1)%playlist.length];preloadNext();$('player-status').textContent=active?'NO AR • programação contínua':'Toque em “Ouvir ao vivo” para entrar na programação.';if($('next-title'))$('next-title').textContent=upcoming.title;if($('next-type'))$('next-type').textContent=upcoming.type==='podcast'?'Podcast • Histórias que Marcaram':upcoming.type==='music'?'Faixa instrumental • programação musical':'Identificação da Rádio Trânsito SP';}
+function load(i=idx){idx=(i+playlist.length)%playlist.length;const t=playlist[idx];$('track').textContent=t.title;$('artist').textContent=t.artist;audio.preload='auto';audio.src=mediaCache.get(t.src)||t.src;audio.load();const upcoming=playlist[(idx+1)%playlist.length];preloadNext();$('player-status').textContent=active?'NO AR • programação contínua':'Toque em “Ouvir ao vivo” para entrar na programação.';if($('next-title'))$('next-title').textContent=upcoming.title;if($('next-type'))$('next-type').textContent=upcoming.type==='podcast'?'Podcast • Histórias que Marcaram':upcoming.type==='music'?'Faixa instrumental • programação musical':'Identificação da Rádio Trânsito SP';}
 function play(){active=true;audio.play().catch(()=>{$('player-status').textContent='Toque em Ouvir para liberar o áudio neste navegador.';});}
 function change(n){load(idx+n);if(active)play();}
 $('play').onclick=()=>{if(audio.paused){play()}else{audio.pause();active=false}};
@@ -39,7 +47,9 @@ audio.onplay=()=>{$('play').innerHTML='<span>❚❚</span> NO AR';active=true;$(
 audio.onpause=()=>{$('play').innerHTML='<span>▶</span> OUVIR AO VIVO';if(active===false)$('player-status').textContent='Toque em “Ouvir ao vivo” para entrar na programação.'};
 audio.onended=()=>{if(interrupted)return;idx=(idx+1)%playlist.length;load();play()};
 let skips=0;audio.onerror=()=>{if(interrupted)return;$('player-status').textContent='Áudio indisponível; avançando.';if(++skips<playlist.length)setTimeout(()=>change(1),250);else{active=false;$('player-status').textContent='Não foi possível carregar a programação. Verifique se a pasta media foi enviada.'}};audio.oncanplay=()=>{skips=0};
-load();
+const podcastStarts=playlist.map((t,i)=>t.type==='podcast'?i:-1).filter(i=>i>=0);
+idx=podcastStarts[Math.floor(Math.random()*podcastStarts.length)];
+load(idx);
 
 // Feed de trânsito: pronto para ARTESP/Worker quando a chave for aprovada.
 const feed=$('feed');feed.value=localStorage.getItem('radio_feed')||'';
