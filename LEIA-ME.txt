@@ -9,3 +9,9 @@ As duas instrumentais incluídas são composições digitais simples e originais
 Sem GameBGM. Sem dependência externa para músicas.
 
 A fonte ARTESP continua pendente; não há boletim oficial ativo até configurar feed válido.
+
+
+Atualização v7:
+- pré-carregamento real do próximo áudio para reduzir pausas entre faixas;
+- Caso Isabella Nardoni adicionado;
+- cache PWA atualizado.

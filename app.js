@@ -13,9 +13,24 @@ const playlist=[
  {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
  {type:'music',title:'Instrumental Retrô 80',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-retro-80.mp3'},
  {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
+ {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
+ {type:'podcast',title:'Caso Isabella Nardoni: mídia e perícia',artist:'Histórias que Marcaram',src:'media/isabella-nardoni.mp3'},
+ {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
+ {type:'music',title:'Instrumental Retrô 80',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-retro-80.mp3'},
+ {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
 ];
 let idx=0,active=false,items=[],updated=null,interrupted=null;
-function load(i=idx){idx=(i+playlist.length)%playlist.length;const t=playlist[idx];$('track').textContent=t.title;$('artist').textContent=t.artist;audio.src=t.src;audio.load();const upcoming=playlist[(idx+1)%playlist.length];if(upcoming.type==='vinheta'||upcoming.type==='music'){const l=document.createElement('link');l.rel='prefetch';l.as='audio';l.href=upcoming.src;document.head.appendChild(l);setTimeout(()=>l.remove(),60000)}$('player-status').textContent=active?'NO AR • programação contínua':'Toque em “Ouvir ao vivo” para entrar na programação.';if($('next-title'))$('next-title').textContent=upcoming.title;if($('next-type'))$('next-type').textContent=upcoming.type==='podcast'?'Podcast • Histórias que Marcaram':upcoming.type==='music'?'Faixa instrumental • programação musical':'Identificação da Rádio Trânsito SP';}
+let nextPreloader=null;
+function preloadNext(){
+  const upcoming=playlist[(idx+1)%playlist.length];
+  if(!upcoming)return;
+  if(nextPreloader){nextPreloader.src='';nextPreloader.load();}
+  nextPreloader=new Audio();
+  nextPreloader.preload='auto';
+  nextPreloader.src=upcoming.src;
+  nextPreloader.load();
+}
+function load(i=idx){idx=(i+playlist.length)%playlist.length;const t=playlist[idx];$('track').textContent=t.title;$('artist').textContent=t.artist;audio.preload='auto';audio.src=t.src;audio.load();const upcoming=playlist[(idx+1)%playlist.length];preloadNext();$('player-status').textContent=active?'NO AR • programação contínua':'Toque em “Ouvir ao vivo” para entrar na programação.';if($('next-title'))$('next-title').textContent=upcoming.title;if($('next-type'))$('next-type').textContent=upcoming.type==='podcast'?'Podcast • Histórias que Marcaram':upcoming.type==='music'?'Faixa instrumental • programação musical':'Identificação da Rádio Trânsito SP';}
 function play(){active=true;audio.play().catch(()=>{$('player-status').textContent='Toque em Ouvir para liberar o áudio neste navegador.';});}
 function change(n){load(idx+n);if(active)play();}
 $('play').onclick=()=>{if(audio.paused){play()}else{audio.pause();active=false}};
