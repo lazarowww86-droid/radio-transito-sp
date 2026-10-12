@@ -1,0 +1,13 @@
+RÁDIO TRÂNSITO SP — V3 / CET (EXPERIMENTAL)
+
+1. Crie um NOVO Worker na Cloudflare (não altere o Worker do Gestão de Territórios).
+2. Cole o conteúdo de worker-cet.js, salve e faça Deploy.
+3. Abra https://SEU-WORKER.workers.dev/boletins. Se aparecer items com as cinco regiões, a coleta funcionou. Se aparecer error, a integração não está funcional; não invente boletins.
+4. Publique os arquivos do PWA (index.html, app.js, styles.css, manifest.json, icon.svg, sw.js) em um NOVO repositório GitHub Pages.
+5. No app, em Fonte de boletins, cole a URL https://SEU-WORKER.workers.dev/boletins e clique Salvar fonte.
+6. Toque Ouvir. Boletins automáticos serão tentados a cada 15 minutos com a página aberta e música ativa. O navegador pode suspender áudio/voz em segundo plano.
+
+ATENÇÃO: Não foi possível executar o Worker na Cloudflare daqui. A página pública da CET exibe números, mas não há confirmação de permissão para raspagem automatizada nem de horário exato das medições. A coleta pode falhar se o HTML mudar ou se o servidor bloquear o Worker. O horário updated_at é o da consulta, não o da medição. Antes de disponibilizar a rádio ao público, confirme as condições de reutilização com a CET. Não publique como serviço oficial.
+
+O Worker consulta somente o site da CET (capital), NÃO cobre rodovias.
+Não altera nem usa nenhum recurso do projeto Gestão de Territórios.
