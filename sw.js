@@ -1,4 +1,4 @@
-const BUILD = '20261013-r12-vinhetas';
+const BUILD = '20261013-r13-mamonas';
 const MEDIA_BUILD = '20261013-r2-light';
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);

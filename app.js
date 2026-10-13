@@ -7,7 +7,8 @@ const podcasts = [
  {type:'podcast',title:'Maníaco do Parque: era psicopata ou doente?',artist:'Histórias que Marcaram',src:'media/maniaco-do-parque.mp3',duration:1192.882},
  {type:'podcast',title:'Carandiru: do massacre ao indulto',artist:'Histórias que Marcaram',src:'media/carandiru.mp3',duration:793.182},
  {type:'podcast',title:'Caso Isabella Nardoni: mídia e perícia',artist:'Histórias que Marcaram',src:'media/isabella-nardoni.mp3',duration:695.144},
- {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3',duration:601.783}
+ {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3',duration:601.783},
+ {type:'podcast',title:'Mamonas Assassinas: o que realmente derrubou a banda?',artist:'Histórias que Marcaram',src:'media/mamonas-assassinas.mp3',duration:1398.178}
 ];
 const musicTracks = window.RadioMusicTracks;
 const playlist = [...musicTracks, ...podcasts];
