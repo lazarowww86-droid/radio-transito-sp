@@ -1,12 +1,2 @@
-ATUALIZAÇÃO: 20 novas músicas; seleção total de 56.
-
-1. Extraia 15-ADICIONAR-MUSICAS3.zip.
-2. No início do repositório radio-transito-sp, clique Add file > Upload files.
-3. Envie index.html, music-tracks.js, sw.js e a pasta media que estão DENTRO do ZIP.
-4. Clique Commit changes e aguarde a publicação.
-
-Não envie o ZIP diretamente. Não apague a pasta media existente.
-As 36 músicas anteriores estão mantidas na lista. Se ainda não enviou o pacote 14 (Roupa Nova), envie-o primeiro.
-Áudios novos: MP3 48 kbps, mono, 22050 Hz, sem cortes; cada arquivo abaixo de 2 MB.
-Player, boletins, tempo, podcasts e ícones preservados.
-As músicas novas vieram sem títulos/artistas identificados; aparecem como CD 3 — Faixa 01 a 20.
+Extraia o ZIP. Envie somente index.html e sw.js na raiz do repositório radio-transito-sp, em Add file > Upload files. Clique Commit changes.
+Remove apenas o bloco Entre os programas com a quantidade e o funcionamento da seleção musical.
