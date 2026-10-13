@@ -177,7 +177,7 @@ function create(hooks) {
   function schedule() {
     if (!inFlight) paint();
     if (!hooks.isListening()) return;
-    if (nextAt === null) nextAt = Date.now() + INTERVAL;
+    if (nextAt === null) nextAt = Date.now() + 60000;
     if (Date.now() >= nextAt && !bulletinRunning && hooks.canAnnounce(false)) bulletin(false);
   }
   function cancelPending() { interaction++; }

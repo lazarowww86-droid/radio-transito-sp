@@ -394,6 +394,25 @@ function playSting(src, job) {
   });
 }
 
+async function prepareAnnouncementVoice(job) {
+  const original = current;
+  const endDuringPreparation = () => finishAnnouncement(job);
+  const removeListener = () => original.removeEventListener('ended', endDuringPreparation);
+  original.addEventListener('ended', endDuringPreparation);
+  job.cleanups.add(removeListener);
+  try {
+    const voices = portugueseVoices();
+    const preferred = job.kind === 'weather' ? selectedVoice('weather') : voices.find(voice => voice.localService) || voices[0] || null;
+    const local = voices.find(voice => voice.localService);
+    const candidates = [...new Set([preferred, local, null].filter(voice => voice !== undefined))];
+    for (const voice of candidates) {
+      if (announcement !== job || job.cancelled) return null;
+      if (await speakText('Boletim.', job, { voice, volume: 0, requireStart: true, startTimeout: 7000 })) return { voice };
+    }
+    return null;
+  } finally { removeListener(); job.cleanups.delete(removeListener); }
+}
+
 function speakText(text, job, options = {}) {
   if (job.cancelled || announcement !== job || !canSpeak()) return Promise.resolve(false);
   return new Promise(resolve => {
@@ -715,7 +734,7 @@ const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
 });
-let lastTimeSlot = '';
+let lastTimeSlot = '', nextTimeAttempt = 0;
 function radioTime(date = new Date()) {
   return Object.fromEntries(timeFormatter.formatToParts(date).map(part => [part.type, part.value]));
 }
@@ -724,16 +743,24 @@ function timeText(parts) {
   return `Rádio Trânsito SP. Agora, ${hour} ${hour === 1 ? 'hora' : 'horas'}` +
     (minute ? ` e ${minute} ${minute === 1 ? 'minuto' : 'minutos'}` : '') + '.';
 }
-function checkTimeAnnouncement() {
+async function checkTimeAnnouncement() {
   if (!wanted || current.paused || pendingPlay || current.readyState < 2 || announcement) return;
   const parts = radioTime();
-  if (Number(parts.minute) % 10 !== 0) return;
-  const slot = `${parts.year}-${parts.month}-${parts.day}-${parts.hour}-${parts.minute}`;
-  if (slot === lastTimeSlot) return;
-  const job = beginAnnouncement('time');
+  const slot = `${parts.year}-${parts.month}-${parts.day}-${parts.hour}-${Math.floor(Number(parts.minute) / 10)}`;
+  if (slot === lastTimeSlot || Date.now() < nextTimeAttempt) return;
+  const job = beginAnnouncement('time', false);
   if (!job) return;
-  lastTimeSlot = slot;
-  speakText(timeText(parts), job).finally(() => finishAnnouncement(job));
+  let said = false;
+  try {
+    const prepared = await prepareAnnouncementVoice(job);
+    if (!prepared || announcement !== job || job.cancelled) return;
+    current.pause();
+    said = await speakText(timeText(radioTime()), job, { voice: prepared.voice, requireStart: true, startTimeout: 7000 });
+    if (said) lastTimeSlot = slot;
+  } finally {
+    nextTimeAttempt = Date.now() + (said ? 0 : 60000);
+    finishAnnouncement(job);
+  }
 }
 function tick() {
   checkPodcastPromo();
@@ -800,13 +827,16 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
       canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
       announce: async (text, snapshot, stillValid = () => true) => {
         if (!stillValid() || announcement || pendingPlay) return false;
-        const job = beginAnnouncement('weather');
+        const job = beginAnnouncement('weather', false);
         if (!job) return false;
         try {
+          const prepared = await prepareAnnouncementVoice(job);
+          if (!prepared || !stillValid() || announcement !== job || job.cancelled) return false;
+          current.pause();
           // Frases curtas mantêm os limites de espera da voz pequenos.
           const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
           for (const phrase of phrases) {
-            if (!await speakText(phrase.trim(), job)) return false;
+            if (!await speakText(phrase.trim(), job, { voice: prepared.voice, requireStart: true, startTimeout: 7000 })) return false;
           }
           if (stillValid()) await playSting(STINGS.identity, job);
           return true;
@@ -828,10 +858,13 @@ if (window.RadioNews && typeof window.RadioNews.create === 'function') {
       canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
       announce: async (phrases, stillValid = () => true) => {
         if (!stillValid() || announcement || pendingPlay) return false;
-        const job = beginAnnouncement('news');
+        const job = beginAnnouncement('news', false);
         if (!job) { if ($('news-status')) $('news-status').textContent = 'A leitura de notícias não está disponível neste dispositivo.'; return false; }
         try {
-          for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
+          const prepared = await prepareAnnouncementVoice(job);
+          if (!prepared || !stillValid() || announcement !== job || job.cancelled) return false;
+          current.pause();
+          for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job, { voice: prepared.voice, requireStart: true, startTimeout: 7000 })) return false;
           if (stillValid()) await playSting(STINGS.identity, job);
           return true;
         } finally { finishAnnouncement(job); }

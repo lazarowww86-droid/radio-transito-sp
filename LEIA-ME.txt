@@ -1,15 +1,18 @@
-CORREÇÃO DA LEITURA DO BOLETIM DE TRÂNSITO
+RÁDIO TRÂNSITO SP — HORA, PREVISÃO E TRÂNSITO
 
-Extraia 20-CORRIGIR-LEITURA-TRANSITO.zip.
+Este pacote já inclui a correção 20 de leitura do trânsito.
+Extraia 21-CORRIGIR-HORA-E-PREVISAO.zip.
 No início do repositório radio-transito-sp, clique Add file > Upload files.
-Envie somente app.js, index.html e sw.js que estão dentro do ZIP.
+Envie app.js, weather.js, index.html e sw.js que estão dentro do ZIP.
 Clique Commit changes e aguarde a publicação.
-Depois abra a rádio e atualize a página (no computador: Ctrl + Shift + R).
-Clique OUVIR BOLETIM para conferir no aparelho que apresentou a falha.
+Atualize a rádio (no computador, Ctrl + Shift + R), toque em OUVIR AO VIVO e deixe tocando.
 
-A música continua enquanto a voz é preparada. A vinheta de giro toca após confirmar o funcionamento da voz; o texto é lido em trechos curtos e depois vem a vinheta de retorno.
-Se a voz do aparelho não funcionar, a vinheta não anuncia um giro vazio e o painel informa a falha. Os dados continuam visíveis no painel.
-A pausa, a troca de faixa e o horário de podcasts continuam sendo respeitados.
+- Hora: primeira entrada após iniciar a escuta e próximas nos intervalos de dez minutos. Se outro aviso estiver no ar, aguarda e anuncia o horário atual.
+- Previsão: primeira entrada após aproximadamente um minuto de escuta, próximas a cada 30 minutos.
+- A voz é preparada com a música tocando; falhas não contam como transmissão bem-sucedida.
+- Notícias também usam a preparação da voz, mantendo os horários que já existiam.
+- Trânsito: vinheta após confirmar voz disponível, informações em trechos curtos e vinheta de retorno.
 
-Nenhum áudio precisa ser enviado novamente. Nenhuma configuração ou chave da ARTESP muda.
-As músicas, os cinco podcasts, as notícias, a previsão e os nomes/sentidos já configurados foram preservados.
+Todos os avisos respeitam a pausa do ouvinte. Horário de Brasília.
+Nenhum MP3 precisa ser enviado novamente. Os cinco podcasts, 56 músicas, vinhetas, notícias e ARTESP continuam preservados.
+Nenhuma configuração de chave ou da Cloudflare muda.
