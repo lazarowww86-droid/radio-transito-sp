@@ -1,0 +1,87 @@
+RÁDIO TRÂNSITO SP — INTEGRAÇÃO ARTESP
+Produto aprovado: Ocorrências Rodoviárias
+
+ETAPA 1 — ENVIAR A PASTA
+1. Extraia 11-INTEGRACAO-ARTESP.zip no computador.
+2. No GitHub, abra a raiz do repositório radio-transito-sp.
+3. Use Add file > Upload files e arraste a pasta artesp inteira. Confirme o commit.
+   A estrutura será artesp/worker.mjs, artesp/traffic.mjs, artesp/wrangler.jsonc etc.
+   Este pacote acrescenta somente essa pasta. Os arquivos do player do pacote 10 continuam sendo usados.
+
+ETAPA 2 — CRIAR O SERVIÇO NO CLOUDFLARE
+1. Entre em https://dash.cloudflare.com/ e abra Workers & Pages.
+2. Selecione Create application > Import a repository e conecte sua conta GitHub.
+3. Escolha o repositório radio-transito-sp.
+4. Configure os campos:
+   Nome do Worker: radio-transito-sp-artesp
+   Branch: main
+   Root directory / Diretório raiz: artesp
+   Build command / Comando de compilação: npm run validate
+   Deploy command / Comando de publicação: npm run deploy
+5. Clique Save and Deploy e aguarde a publicação.
+6. O armazenamento compartilhado ARTESP_CACHE será criado pela configuração do pacote.
+   O projeto usa SQLite/Durable Objects, disponível no plano Free dentro dos limites da plataforma.
+
+ETAPA 3 — GUARDAR A CHAVE
+1. No portal https://ccm.artesp.sp.gov.br/, abra Minha Conta > Minhas APIs > Ocorrências Rodoviárias.
+2. Abra a seção de Ocorrências e revele/copie sua chave ativa. O portal pode limitar a exibição desse valor.
+3. No Cloudflare, abra o Worker radio-transito-sp-artesp > Settings > Variables and Secrets > Add.
+4. Selecione o tipo Secret.
+   Variable name / Nome: ARTESP_API_KEY
+   Value / Valor: cole somente a chave copiada do portal.
+   O código já acrescenta o prefixo Api-Key. Esse prefixo não deve fazer parte do valor salvo.
+5. Clique Deploy para aplicar.
+   A chave fica no segredo do seu Worker. Ela não faz parte dos arquivos enviados ao GitHub.
+
+ETAPA 4 — TESTAR E CONECTAR À RÁDIO
+1. Copie o endereço HTTPS do Worker fornecido pelo Cloudflare.
+2. Abra esse endereço no navegador. A página deve mostrar configured: true.
+   Isso confirma a presença da configuração; ainda não testa a autorização da ARTESP.
+3. Acrescente /boletins ao endereço e abra novamente.
+   O resultado correto é um JSON com updated_at e items. Os registros da fonte aparecem no campo items.
+   Havendo erro, use a mensagem retornada para conferir a chave, o produto, os termos ou a cota.
+4. Para testar na rádio, abra Configuração da fonte de trânsito, cole o endereço completo terminado em /boletins e clique SALVAR FONTE.
+   Essa configuração atual é local ao navegador. Para definir a fonte automaticamente para todos os ouvintes, envie somente o endereço público do Worker para a próxima atualização do site.
+5. Com os dados válidos, o botão TESTAR BOLETIM faz a leitura. O boletim automático continua a cada 15 minutos de escuta; o player retoma do mesmo ponto.
+
+ALCANCE E HORÁRIO
+- Consulta o produto Ocorrências Rodoviárias, com registros ativos conhecidos nos últimos sete dias.
+- O recorte inicial são rodovias monitoradas pela ARTESP nos municípios de São Paulo e Guarulhos.
+- A consulta não substitui um painel de todas as ruas urbanas, nem fornece velocidade em toda a malha viária.
+- updated_at é o horário que a API oficial informa para a consulta. O horário original não é renovado ao servir o cache.
+- São escolhidos até cinco registros para a locução. Se houver mais de uma página ou algum registro descartado, complete será false.
+- O adaptador não inventa detalhes de bloqueios nem interpreta campos de vítimas. A inclusão desses detalhes depende de examinar a resposta real após a conexão.
+
+CACHE E COTA
+- Em operação normal, uma consulta à ARTESP a cada 15 minutos, compartilhada pela rádio inteira.
+- As tentativas ficam registradas antes da chamada e sobrevivem a reinícios.
+- Falhas aguardam pelo menos 5 minutos e 1 segundo; 429 respeita Retry-After.
+- Há um teto adicional de 12 tentativas em qualquer janela de uma hora.
+- Essa proteção vale para este serviço. Usar a mesma chave em outros aplicativos também consome a cota da ARTESP.
+- A rádio continua tocando se a fonte estiver indisponível. O serviço não apresenta dados de uma consulta antiga como dados novos.
+
+CRÉDITOS
+Fonte: ARTESP — Centro de Controle Multimodal.
+Portal: https://ccm.artesp.sp.gov.br/
+Licença dos dados: CC BY-NC 4.0 — https://creativecommons.org/licenses/by-nc/4.0/
+Os dados fornecidos pela API são resumidos em texto para os boletins; a resposta do serviço inclui fonte, link, licença e indicação do recorte.
+
+VALIDAÇÃO DESTA ENTREGA
+- 26 testes do adaptador e das rotas, com respostas e armazenamento simulados.
+- 1 teste de compatibilidade com a rádio atual: o boletim pausa e retoma o MP3 no mesmo ponto; erro da fonte não interrompe a reprodução.
+- Empacotamento validado com Wrangler 4.150.0 em modo dry-run.
+- A chave real não foi recebida nem testada. O serviço ainda precisa ser publicado no seu Cloudflare e validado com a ARTESP.
+
+ALTERNATIVA PARA QUEM JÁ USA O TERMINAL
+Na pasta artesp, com Node.js instalado:
+npm ci
+npx wrangler login
+npm run deploy
+npx wrangler secret put ARTESP_API_KEY
+
+DOCUMENTAÇÃO
+https://ccm.artesp.sp.gov.br/rodovias/api/docs/
+https://ccm.artesp.sp.gov.br/termos-de-uso-das-apis
+https://developers.cloudflare.com/workers/ci-cd/builds/
+https://developers.cloudflare.com/workers/configuration/secrets/
+https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/
