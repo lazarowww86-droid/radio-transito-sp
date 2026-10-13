@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-const WORKER_URL='';
+const mainAudio=$('audio');
 const playlist=[
  {type:'vinheta',title:'Rádio Trânsito SP — Abertura',artist:'Vinheta da rádio',src:'media/vinheta-abertura-mix.mp3'},
  {type:'podcast',title:'Maníaco do Parque: era psicopata ou doente?',artist:'Histórias que Marcaram',src:'media/maniaco-do-parque.mp4'},
@@ -23,222 +23,173 @@ const playlist=[
  {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
 ];
 
-const audio=$('audio');
-audio.preload='auto';
+let idx=0, active=false, items=[], updated=null, interrupted=null, lastTimeSlot='';
+let current=mainAudio;
+let standby=new Audio();
+standby.preload='auto';
+current.preload='auto';
 
-let idx=0;
-let active=false;
-let started=false;
-let interrupting=false;
-let pendingInterrupts=[];
-let nextBuffer=null;
-let nextBufferIndex=null;
-let trafficItems=[];
-let trafficUpdated=null;
-let lastClockKey='';
-let lastTrafficKey='';
+function fmt(t){if(!Number.isFinite(t))return '--:--';const m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+String(s).padStart(2,'0')}
+function nextIndex(){return (idx+1)%playlist.length}
 
-function fmt(sec){
-  if(!Number.isFinite(sec)) return '0:00';
-  const m=Math.floor(sec/60), s=Math.floor(sec%60);
-  return `${m}:${String(s).padStart(2,'0')}`;
-}
-
-function upcomingIndex(){ return (idx+1)%playlist.length; }
-
-function buildNextBuffer(){
-  const ni=upcomingIndex();
-  const t=playlist[ni];
-  const b=new Audio();
-  b.preload='auto';
-  b.src=t.src;
-  b.load();
-  nextBuffer=b;
-  nextBufferIndex=ni;
-}
-
-function updateNow(){
-  const t=playlist[idx];
+function updateUI(){
+  const t=playlist[idx], n=playlist[nextIndex()];
   $('track').textContent=t.title;
   $('artist').textContent=t.artist;
+  if($('next-title'))$('next-title').textContent=n.title;
+  if($('next-type'))$('next-type').textContent=n.type==='podcast'?'Podcast • Histórias que Marcaram':n.type==='music'?'Faixa instrumental • programação musical':'Identificação da Rádio Trânsito SP';
   $('player-status').textContent=active?'NO AR • programação contínua':'Toque em “Ouvir ao vivo” para entrar na programação.';
-  const upcoming=playlist[upcomingIndex()];
-  if($('next-title')) $('next-title').textContent=upcoming.title;
-  if($('next-type')) $('next-type').textContent=
-    upcoming.type==='podcast'?'Podcast • Histórias que Marcaram':
-    upcoming.type==='music'?'Faixa instrumental • programação musical':
-    'Identificação da Rádio Trânsito SP';
 }
 
-function setTrack(i, autoplay=false){
-  idx=(i+playlist.length)%playlist.length;
-  const t=playlist[idx];
-  audio.src=t.src;
-  audio.preload='auto';
-  audio.load();
-  updateNow();
-  buildNextBuffer();
-  if(autoplay && active) audio.play().catch(()=>{});
+function prepareStandby(){
+  const n=playlist[nextIndex()];
+  standby.src=n.src;
+  standby.preload='auto';
+  standby.load();
 }
 
-function advance(){
-  const ni=upcomingIndex();
-  idx=ni;
-  const t=playlist[idx];
-
-  // Reuse the already-buffered media URL immediately. The browser media cache
-  // normally serves it without a second network wait.
-  if(nextBuffer && nextBufferIndex===idx){
-    audio.src=nextBuffer.src;
-  } else {
-    audio.src=t.src;
-  }
-  audio.preload='auto';
-  audio.load();
-  updateNow();
-
-  const p=audio.play();
-  if(p) p.catch(()=>{});
-  buildNextBuffer();
-}
-
-audio.addEventListener('ended',()=>{
-  if(!interrupting) advance();
-});
-audio.addEventListener('timeupdate',()=>{
-  if(Number.isFinite(audio.duration) && audio.duration>0){
-    $('progress').style.width=`${Math.min(100,(audio.currentTime/audio.duration)*100)}%`;
-    $('elapsed').textContent=fmt(audio.currentTime);
-    $('duration').textContent=fmt(audio.duration);
-  }
-});
-audio.addEventListener('waiting',()=>{ if(active&&!interrupting) $('player-status').textContent='NO AR • carregando próximo áudio…'; });
-audio.addEventListener('playing',()=>{ if(active&&!interrupting) $('player-status').textContent='NO AR • programação contínua'; });
-
-function pickRandomPodcast(){
-  const podcastIndexes=playlist.map((t,i)=>t.type==='podcast'?i:null).filter(i=>i!==null);
-  return podcastIndexes[Math.floor(Math.random()*podcastIndexes.length)] ?? 0;
-}
-
-$('listen').addEventListener('click',async()=>{
-  if(!started){
-    started=true;
-    active=true;
-    setTrack(pickRandomPodcast(),false);
-    try{ await audio.play(); }catch(e){}
-    $('listen').textContent='🔊 NO AR';
-    return;
-  }
-  if(audio.paused){
-    active=true;
-    await audio.play().catch(()=>{});
-    $('listen').textContent='🔊 NO AR';
-  }else{
-    active=false;
-    audio.pause();
-    $('listen').textContent='▶ CONTINUAR';
-    $('player-status').textContent='Programação pausada';
-  }
-});
-
-function ptHourText(d){
-  const h=d.getHours(), min=d.getMinutes();
-  const hs = h===0 ? 'meia-noite' : h===1 ? 'uma hora' : h===12 ? 'meio-dia' : `${h} horas`;
-  if(min===0) return hs;
-  return `${hs} e ${min} minutos`;
-}
-
-function speakText(text){
-  return new Promise(resolve=>{
-    if(!('speechSynthesis' in window)){ resolve(); return; }
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);
-    u.lang='pt-BR';
-    u.rate=0.96;
-    u.pitch=1;
-    u.onend=resolve;
-    u.onerror=resolve;
-    speechSynthesis.speak(u);
+function attachPlayerEvents(a){
+  a.addEventListener('timeupdate',()=>{
+    if(a!==current)return;
+    if($('elapsed'))$('elapsed').textContent=fmt(a.currentTime);
+    if($('duration'))$('duration').textContent=fmt(a.duration);
+    if($('progress'))$('progress').style.width=(a.duration?a.currentTime/a.duration*100:0)+'%';
   });
+  a.addEventListener('loadedmetadata',()=>{if(a===current&&$('duration'))$('duration').textContent=fmt(a.duration)});
+  a.addEventListener('play',()=>{if(a!==current)return;$('play').innerHTML='<span>❚❚</span> NO AR';active=true;$('player-status').textContent='NO AR • programação contínua'});
+  a.addEventListener('pause',()=>{if(a!==current)return;if(!active){$('play').innerHTML='<span>▶</span> OUVIR AO VIVO';$('player-status').textContent='Toque em “Ouvir ao vivo” para entrar na programação.'}});
+  a.addEventListener('ended',()=>{if(a!==current||interrupted)return;swapToNext()});
+  a.addEventListener('error',()=>{if(a!==current||interrupted)return;$('player-status').textContent='Áudio indisponível; avançando.';swapToNext()});
+}
+attachPlayerEvents(current);
+attachPlayerEvents(standby);
+
+function loadCurrent(i){
+  idx=(i+playlist.length)%playlist.length;
+  current.src=playlist[idx].src;
+  current.preload='auto';
+  current.load();
+  updateUI();
+  prepareStandby();
 }
 
-async function runInterrupt(text,label){
-  if(!active || interrupting){
-    pendingInterrupts.push({text,label});
-    return;
-  }
-  interrupting=true;
-  const wasPaused=audio.paused;
-  audio.pause();
-  $('player-status').textContent=label;
-  await speakText(text);
-  if(active && !wasPaused){
-    await audio.play().catch(()=>{});
-  }
-  interrupting=false;
-  $('player-status').textContent=active?'NO AR • programação contínua':'Programação pausada';
-  if(pendingInterrupts.length){
-    const n=pendingInterrupts.shift();
-    setTimeout(()=>runInterrupt(n.text,n.label),250);
-  }
+async function playCurrent(){
+  active=true;
+  try{await current.play()}catch(e){$('player-status').textContent='Toque em “Ouvir ao vivo” para liberar o áudio neste navegador.'}
 }
 
-function clockTick(){
-  if(!active) return;
-  const now=new Date();
-  // Fires once in the first 20 seconds of every 10-minute mark.
-  if(now.getMinutes()%10===0 && now.getSeconds()<20){
-    const key=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
-    if(key!==lastClockKey){
-      lastClockKey=key;
-      runInterrupt(`Rádio Trânsito SP. Agora, ${ptHourText(now)}.`,'🕒 HORA CERTA');
-    }
-  }
-}
-setInterval(clockTick,1000);
+function swapToNext(){
+  const old=current;
+  current=standby;
+  standby=old;
+  idx=nextIndex();
+  updateUI();
 
-async function loadTraffic(){
-  if(!WORKER_URL) return;
+  // O próximo já estava carregando no segundo player: começa imediatamente.
+  if(active) current.play().catch(()=>{$('player-status').textContent='Carregando próximo áudio…';});
+  standby.pause();
+  standby.removeAttribute('src');
+  standby.load();
+  prepareStandby();
+}
+
+function change(n){
+  current.pause();
+  active=true;
+  loadCurrent(idx+n);
+  playCurrent();
+}
+
+$('play').onclick=()=>{
+  if(current.paused){playCurrent()}
+  else{active=false;current.pause()}
+};
+$('next').onclick=()=>change(1);
+$('prev').onclick=()=>change(-1);
+
+// Começa aleatoriamente em um podcast.
+const podcastStarts=playlist.map((t,i)=>t.type==='podcast'?i:-1).filter(i=>i>=0);
+idx=podcastStarts[Math.floor(Math.random()*podcastStarts.length)];
+loadCurrent(idx);
+
+// Feed de trânsito preservado.
+const feed=$('feed');
+feed.value=localStorage.getItem('radio_feed')||'';
+$('save').onclick=()=>{const v=feed.value.trim();if(v&&!/^https:\/\//i.test(v)){$('feed-status').textContent='Use somente HTTPS.';return}localStorage.setItem('radio_feed',v);$('feed-status').textContent=v?'Fonte salva.':'Fonte removida.';refresh()};
+
+function report(){
+  if(!items.length){$('traffic-status').textContent='Aguardando conexão com a fonte oficial';$('traffic').textContent='Nenhum boletim automático de trânsito está conectado no momento.';return}
+  const age=Date.now()-new Date(updated).getTime();
+  if(!Number.isFinite(age)||age<0||age>30*60000){$('traffic-status').textContent='Boletim desatualizado — não transmitir';$('traffic').textContent='A fonte não apresenta atualização recente.';return}
+  $('traffic-status').textContent='Atualizado: '+new Date(updated).toLocaleString('pt-BR');
+  $('traffic').textContent=items.slice(0,6).join(' • ');
+}
+async function refresh(){
+  const url=localStorage.getItem('radio_feed');
+  if(!url){items=[];updated=null;report();return}
   try{
-    const r=await fetch(WORKER_URL,{cache:'no-store'});
-    if(!r.ok) return;
-    const data=await r.json();
-    trafficItems=Array.isArray(data)?data:(data.items||data.ocorrencias||[]);
-    trafficUpdated=new Date();
-    if($('traffic-count')) $('traffic-count').textContent=trafficItems.length;
-    if($('traffic-update')) $('traffic-update').textContent='Atualizado agora';
-  }catch(e){}
+    const c=new AbortController(),tm=setTimeout(()=>c.abort(),10000),r=await fetch(url,{cache:'no-store',signal:c.signal});
+    clearTimeout(tm);if(!r.ok)throw Error('HTTP '+r.status);
+    const d=await r.json();if(!Array.isArray(d.items)||typeof d.updated_at!=='string')throw Error('JSON inválido');
+    items=d.items.filter(x=>typeof x==='string'&&x.length<350).slice(0,10);updated=d.updated_at;$('feed-status').textContent='Fonte consultada com sucesso.';
+  }catch(e){items=[];updated=null;$('feed-status').textContent='Não foi possível consultar a fonte: '+e.message}
+  report();
 }
 
-function trafficSummary(){
-  if(!trafficItems.length) return '';
-  const first=trafficItems.slice(0,3).map(x=>{
-    const road=x.rodovia||x.road||x.via||'rodovia';
-    const desc=x.descricao||x.description||x.tipo||x.evento||'ocorrência';
-    return `${road}: ${desc}`;
-  }).join('. ');
-  return `Informação de trânsito na Rádio Trânsito SP. ${first}.`;
+function resumeSaved(s){
+  interrupted=null;
+  if(!s)return;
+  if(s.wasPlaying&&active) current.play().catch(()=>{});
 }
 
-function trafficTick(){
-  if(!active) return;
-  const now=new Date();
-  if(now.getMinutes()%15===0 && now.getSeconds()<20){
-    const key=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
-    if(key!==lastTrafficKey){
-      lastTrafficKey=key;
-      const text=trafficSummary();
-      if(text) runInterrupt(text,'🚦 BOLETIM DE TRÂNSITO');
-    }
-  }
+async function trafficBulletin(){
+  if(!items.length||interrupted)return;
+  interrupted={wasPlaying:!current.paused};
+  current.pause();
+  const sting=new Audio('media/vinheta-transito-mix.mp3');
+  const speak=()=>{
+    const u=new SpeechSynthesisUtterance(items.slice(0,6).join('. '));u.lang='pt-BR';u.rate=1;
+    u.onend=u.onerror=()=>{
+      const back=new Audio('media/vinheta-retorno-mix.mp3');
+      back.onended=()=>resumeSaved(interrupted);
+      back.play().catch(()=>resumeSaved(interrupted));
+    };
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  };
+  sting.onended=speak;sting.play().catch(speak);
 }
-setInterval(trafficTick,1000);
-setInterval(loadTraffic,5*60*1000);
-loadTraffic();
+$('speak').onclick=trafficBulletin;
+$('refresh').onclick=refresh;
+refresh();
+setInterval(async()=>{await refresh();if(items.length)trafficBulletin()},15*60*1000);
 
-setInterval(()=>{
-  const d=new Date();
-  if($('clock')) $('clock').textContent=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-},1000);
+// Hora certa: independente do trânsito e sem recarregar o podcast.
+function timeText(d=new Date()){
+  const h=d.getHours(),m=d.getMinutes();
+  if(m===0)return `Rádio Trânsito SP. Agora, ${h} ${h===1?'hora':'horas'}.`;
+  return `Rádio Trânsito SP. Agora, ${h} ${h===1?'hora':'horas'} e ${m} minutos.`;
+}
+function announceTime(){
+  if(!active||current.paused||interrupted)return;
+  const saved={wasPlaying:true};
+  interrupted=saved;
+  current.pause();
+  const u=new SpeechSynthesisUtterance(timeText());
+  u.lang='pt-BR';u.rate=1;u.pitch=1;
+  u.onend=u.onerror=()=>resumeSaved(saved);
+  speechSynthesis.cancel();speechSynthesis.speak(u);
+}
+function checkTimeAnnouncement(){
+  const d=new Date(),m=d.getMinutes();
+  if(m%10!==0||d.getSeconds()>20)return;
+  const slot=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}-${m}`;
+  if(slot===lastTimeSlot)return;
+  if(interrupted)return;
+  lastTimeSlot=slot;
+  announceTime();
+}
+setInterval(checkTimeAnnouncement,1000);
 
-setTrack(0,false);
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+function tick(){if($('clock'))$('clock').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+tick();setInterval(tick,1000);
