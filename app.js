@@ -327,13 +327,13 @@ if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => 
   }
 }
 
-function beginAnnouncement(kind) {
+function beginAnnouncement(kind, pauseAudio = true) {
   if (announcement || (kind !== 'promo' && !canSpeak())) return null;
   const job = { kind, cancelled: false, cleanups: new Set() };
   announcement = job;
   ++playSequence;
   pendingPlay = false;
-  current.pause();
+  if (pauseAudio) current.pause();
   controls();
   status(kind === 'time' ? 'NO AR • hora certa' : kind === 'weather' ? 'NO AR • previsão do tempo' : kind === 'news' ? 'NO AR • notícias' : kind === 'promo' ? 'NO AR • Histórias que Marcaram' : 'NO AR • boletim de trânsito');
   return job;
@@ -394,7 +394,7 @@ function playSting(src, job) {
   });
 }
 
-function speakText(text, job) {
+function speakText(text, job, options = {}) {
   if (job.cancelled || announcement !== job || !canSpeak()) return Promise.resolve(false);
   return new Promise(resolve => {
     const synth = window.speechSynthesis, utterance = new SpeechSynthesisUtterance(text);
@@ -414,18 +414,19 @@ function speakText(text, job) {
     job.utterance = utterance; // Mantém a referência até a fala terminar.
     utterance.lang = 'pt-BR';
     utterance.rate = 1;
-    const voice = selectedVoice(job.kind);
+    utterance.volume = options.volume ?? 1;
+    const voice = Object.hasOwn(options, 'voice') ? options.voice : selectedVoice(job.kind);
     if (voice) utterance.voice = voice;
     utterance.onstart = () => {
       started = true;
       clearTimeout(timer);
       timer = setTimeout(cancel, Math.min(180000, Math.max(15000, text.length / 8 * 1000 + 5000)));
     };
-    utterance.onend = () => finish(true);
+    utterance.onend = () => finish(!options.requireStart || started);
     utterance.onerror = cancel;
     // Algumas implementações deixam de emitir onend. O estado do sintetizador é a reserva.
     poll = setInterval(() => { if (started && !synth.speaking && !synth.pending) finish(true); }, 500);
-    timer = setTimeout(cancel, 3000);
+    timer = setTimeout(cancel, options.startTimeout || 3000);
     try {
       synth.cancel();
       synth.resume();
@@ -582,7 +583,7 @@ let items = [], updated = null, timestampVerified = true;
 const DEFAULT_FEED_URL = 'https://radio-transito-sp.lazarowww86.workers.dev/boletins';
 const feedURL = DEFAULT_FEED_URL;
 let feedRequest = 0, feedController = null;
-let feedLoading = false, feedError = '', timestampKind = '';
+let feedLoading = false, feedError = '', timestampKind = '', trafficVoiceError = '';
 
 function feedFresh() {
   const age = Date.now() - Date.parse(updated);
@@ -604,7 +605,7 @@ function report() {
     $('traffic').textContent = 'A fonte não apresenta atualização recente.';
   } else {
     const label = official ? timestampKind === 'resposta_oficial_http' ? 'Resposta oficial da ARTESP: ' : 'Consulta oficial da ARTESP: ' : 'Atualizado: ';
-    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });$('traffic').textContent = items.slice(0, 6).join(' • ');
+    $('traffic-status').textContent = trafficVoiceError || label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });$('traffic').textContent = items.slice(0, 6).join(' • ');
   }
 }
 
@@ -648,15 +649,56 @@ async function refresh() {
 async function trafficBulletin() {
   if (!feedFresh()) { report(); return; }
   const text = prepareTrafficSpeech(items.slice(0, 6).join('. '));
-  const job = beginAnnouncement('traffic');
+  const job = beginAnnouncement('traffic', false);
   if (!job) {
     if (!canSpeak()) $('traffic-status').textContent = 'A leitura por voz não está disponível neste navegador.';
     return;
   }
+  const original = current;
+  const endDuringPreparation = () => finishAnnouncement(job);
+  const removePreparationListener = () => original.removeEventListener('ended', endDuringPreparation);
+  original.addEventListener('ended', endDuringPreparation);
+  job.cleanups.add(removePreparationListener);
+  const unavailable = () => {
+    if (announcement === job && !job.cancelled) {
+      trafficVoiceError = 'Não foi possível ler o boletim neste dispositivo. As informações continuam no painel de trânsito. Toque em OUVIR BOLETIM para tentar novamente.';
+      report();
+    }
+  };
   try {
+    // Confirma a voz sem interromper a música e sem anunciar uma vinheta vazia.
+    const voices = portugueseVoices();
+    const preferred = voices.find(voice => voice.localService) || voices[0] || null;
+    const candidates = preferred ? [preferred, null] : [null];
+    let voice = null, ready = false;
+    for (const candidate of candidates) {
+      if (announcement !== job || job.cancelled) return;
+      if (await speakText('Boletim de trânsito.', job, { voice: candidate, volume: 0, requireStart: true, startTimeout: 7000 })) {
+        voice = candidate; ready = true; break;
+      }
+    }
+    if (!ready) { unavailable(); return; }
+    if (announcement !== job || job.cancelled || !feedFresh()) return;
+    removePreparationListener();
+    job.cleanups.delete(removePreparationListener);
+    current.pause();
     await playSting(STINGS.traffic, job);
-    const spoken = await speakText(text, job);
-    if (spoken) await playSting(STINGS.back, job);
+    // Mantém o texto existente; somente limita o tamanho de cada fala.
+    const chunks = [];
+    let chunk = '';
+    for (const word of text.trim().split(/\s+/)) {
+      if (chunk && chunk.length + word.length + 1 > 160) { chunks.push(chunk); chunk = ''; }
+      chunk += (chunk ? ' ' : '') + word;
+    }
+    if (chunk) chunks.push(chunk);
+    for (const phrase of chunks) {
+      if (!await speakText(phrase, job, { voice, requireStart: true, startTimeout: 7000 })) { unavailable(); return; }
+    }
+    if (chunks.length) {
+      trafficVoiceError = '';
+      report();
+      await playSting(STINGS.back, job);
+    }
   } finally { finishAnnouncement(job); }
 }
 
