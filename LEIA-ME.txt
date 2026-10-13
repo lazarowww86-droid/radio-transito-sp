@@ -1,17 +1,34 @@
-RÁDIO TRÂNSITO SP — VERSÃO CORRIGIDA
+RÁDIO TRÂNSITO SP — ARQUIVOS LEVES, PRONTOS PARA ENVIAR
 
-Envie TODOS os arquivos e a pasta media para a raiz do repositório radio-transito-sp no GitHub. Substitua app.js, index.html e sw.js. Remova as antigas vinhetas .mp4, se desejar.
+USE OS QUATRO PACOTES, NESTA ORDEM:
+1. 01-MEDIA-PARTE-1.zip
+2. 02-MEDIA-PARTE-2.zip
+3. 03-MEDIA-PARTE-3.zip
+4. 04-ARQUIVOS-DO-SITE.zip
 
-Correção: as vinhetas antigas eram MP4 com vídeo de ~61 segundos, embora o áudio durasse apenas 3–5 segundos. Isso causava longos silêncios. Agora são MP3 curtos com cama musical integrada.
+COMO ENVIAR
+1. Extraia os quatro ZIPs no computador.
+2. Abra a página principal do repositório radio-transito-sp no GitHub.
+3. Clique em Add file > Upload files.
+4. Do primeiro pacote, arraste a pasta chamada media. Aguarde o carregamento dos arquivos e confirme o envio em Commit changes.
+5. Volte à página principal do repositório e repita com a pasta media do segundo pacote; depois com a pasta media do terceiro pacote. Confirme cada envio antes de começar o seguinte.
+6. Por último, envie todos os arquivos extraídos de 04-ARQUIVOS-DO-SITE.zip diretamente na raiz do repositório e confirme.
+7. Após a publicação, recarregue a página. No computador, use Ctrl+F5; no celular, recarregue a página e reabra o aplicativo.
 
-As duas instrumentais incluídas são composições digitais simples e originais com referências estéticas aos anos 80/90. Não são gravações de músicas famosas nem as faixas anteriores.
+Os três primeiros pacotes CONTÊM a pasta media. Envie essa pasta na raiz do repositório. Não crie media/media. O quarto pacote contém os arquivos do site, diretamente na raiz. O ZIP completo RADIO-TRANSITO-SP-LEVE.zip é uma cópia completa do projeto para guardar; para enviar em partes, use os quatro pacotes numerados.
 
-Sem GameBGM. Sem dependência externa para músicas.
+TAMANHO DOS ÁUDIOS
+Todos os podcasts têm menos de 5 MB. Foram comprimidos em MP3 mono a 32 kbps, com frequência de 22.050 Hz. A compressão reduz a fidelidade em comparação ao áudio original, mantendo a narração inteira. As músicas e vinhetas mantêm seus arquivos anteriores.
 
-A fonte ARTESP continua pendente; não há boletim oficial ativo até configurar feed válido.
+PLAY E PAUSAS
+Mantidas as correções do play, pré-carregamento da próxima faixa, retomada dos avisos no mesmo ponto e remoção das caudas de vídeo que causavam 55–58 segundos de silêncio. O cache foi atualizado para usar estes arquivos leves.
 
+Não apague os MP4 antigos antes de concluir o envio do quarto pacote. Eles deixam de ser utilizados pelo player atualizado, e podem ficar no repositório sem interferir.
 
-Atualização v7:
-- pré-carregamento real do próximo áudio para reduzir pausas entre faixas;
-- Caso Isabella Nardoni adicionado;
-- cache PWA atualizado.
+FONTE DE TRÂNSITO
+A URL precisa ser configurada em HTTPS. O projeto recebido não incluía uma fonte ativa. worker-cet.js continua experimental; o horário da medição não está confirmado. O JSON de exemplo contém dados fictícios antigos.
+
+VALIDAÇÃO
+O projeto completo contém RELATORIO-DE-CORRECOES.md e testes executáveis com Node.js:
+node tests/player.test.cjs
+node tests/service-worker.test.cjs
