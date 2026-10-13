@@ -1,11 +1,11 @@
-const BUILD = '20261013-r4-music';
+const BUILD = '20261013-r5-daily';
 const MEDIA_BUILD = '20261013-r2-light';
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);
 const SHELL = `${PREFIX}${SCOPE}-shell-${BUILD}`;
 const MEDIA = `${PREFIX}${SCOPE}-media-${MEDIA_BUILD}`;
 const CORE = [
-  './', './index.html', `./styles.css?v=${BUILD}`, `./weather.js?v=${BUILD}`, `./app.js?v=${BUILD}`,
+  './', './index.html', `./styles.css?v=${BUILD}`, `./music-tracks.js?v=${BUILD}`, `./programming.js?v=${BUILD}`, `./weather.js?v=${BUILD}`, `./app.js?v=${BUILD}`,
   './manifest.json', './icon.svg'
 ];
 const urlFor = path => new URL(path, self.registration.scope).href;

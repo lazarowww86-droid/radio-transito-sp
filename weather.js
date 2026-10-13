@@ -70,7 +70,7 @@ function parse(data, now = Date.now()) {
     const condition = Number.isInteger(code) ? CONDITIONS[code] : null;
     const symbol = !condition ? '◌' : code <= 1 ? '☀' : code <= 3 ? '☁' : code >= 95 ? 'ϟ' : code >= 51 && code <= 82 ? '☂' : '☁';
     return { ...city, at, temperature: current.temperature_2m, feels: current.apparent_temperature, min, max, rain,
-      condition: condition || 'Condição não informada', hasCondition: Boolean(condition), symbol };
+      weatherCode: Number.isInteger(code) ? code : null, condition: condition || 'Condição não informada', hasCondition: Boolean(condition), symbol };
   });
   return { cities, fetchedAt: now, forecastDate: day, dayLabel: useTomorrow ? 'amanhã' : 'hoje' };
 }
@@ -165,7 +165,7 @@ function create(hooks) {
       if (revision !== interaction || (wasListening && !hooks.isListening())) return;
       if (!loaded || !fresh(snapshot)) { if (!manual) nextAt = Date.now() + RETRY; return; }
       if (!hooks.canAnnounce(manual)) { if (!manual) nextAt = Date.now() + 5000; return; }
-      const said = await hooks.announce(text(snapshot));
+      const said = await hooks.announce(text(snapshot), snapshot, () => revision === interaction && (!wasListening || hooks.isListening()) && fresh(snapshot));
       if (revision !== interaction) return;
       nextAt = Date.now() + (said ? INTERVAL : RETRY);
       if (!said) message('A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
@@ -182,7 +182,7 @@ function create(hooks) {
   }
   function cancelPending() { interaction++; }
   for (const id of ['play', 'next', 'prev']) $(id)?.addEventListener('click', cancelPending);
-  $('weather-speak').addEventListener('click', () => bulletin(true));
+  $('weather-speak').addEventListener('click', () => { hooks.unlockVoice?.(); bulletin(true); });
   $('weather-refresh').addEventListener('click', refresh);
   timers.push(setInterval(refresh, INTERVAL), setInterval(schedule, 1000));
   refresh();

@@ -2,26 +2,19 @@
 'use strict';
 const $ = id => document.getElementById(id);
 
-// Duas músicas entre os podcasts; o rodízio percorre todas as faixas do CD.
+// Um podcast por dia, repetido nos horários fixos; música aleatória no restante do dia.
 const podcasts = [
- {type:'podcast',title:'Maníaco do Parque: era psicopata ou doente?',artist:'Histórias que Marcaram',src:'media/maniaco-do-parque.mp3'},
- {type:'podcast',title:'Carandiru: do massacre ao indulto',artist:'Histórias que Marcaram',src:'media/carandiru.mp3'},
- {type:'podcast',title:'Caso Isabella Nardoni: mídia e perícia',artist:'Histórias que Marcaram',src:'media/isabella-nardoni.mp3'},
- {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3'}
+ {type:'podcast',title:'Maníaco do Parque: era psicopata ou doente?',artist:'Histórias que Marcaram',src:'media/maniaco-do-parque.mp3',duration:1192.882},
+ {type:'podcast',title:'Carandiru: do massacre ao indulto',artist:'Histórias que Marcaram',src:'media/carandiru.mp3',duration:793.182},
+ {type:'podcast',title:'Caso Isabella Nardoni: mídia e perícia',artist:'Histórias que Marcaram',src:'media/isabella-nardoni.mp3',duration:695.144},
+ {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3',duration:601.783}
 ];
-const musicTracks = Array.from({ length: 20 }, (_, index) => {
- const number = index + 2;
- return {type:'music',title:`Faixa ${number}`,artist:'Seleção musical • Rádio Trânsito SP',src:`media/musica-faixa-${String(number).padStart(2, '0')}.mp3`};
-});
-const identification = {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'};
-const playlist = [{type:'vinheta',title:'Rádio Trânsito SP — Abertura',artist:'Vinheta da rádio',src:'media/vinheta-abertura-mix.mp3'}];
-let blocks = podcasts.length;
-while (blocks * 2 % musicTracks.length !== 0) blocks += podcasts.length;
-for (let block = 0; block < blocks; block++) {
- playlist.push(podcasts[block % podcasts.length], identification,
-  musicTracks[block * 2 % musicTracks.length], musicTracks[(block * 2 + 1) % musicTracks.length]);
- if (block < blocks - 1) playlist.push(identification);
-}
+const musicTracks = window.RadioMusicTracks;
+const playlist = [...musicTracks, ...podcasts];
+const programming = window.RadioProgramming.create(
+  musicTracks.map((_, i) => i),
+  podcasts.map((track, i) => ({index: musicTracks.length + i, duration: track.duration}))
+);
 
 // O estado do botão representa a intenção do ouvinte, inclusive durante avisos.
 const BUILD = '20261013-r2-light';
@@ -58,7 +51,7 @@ function progress() {
 }
 
 function trackInfo() {
-  const track = playlist[idx], next = playlist[wrap(idx + 1)];
+  const track = playlist[idx], next = playlist[programming.peek()];
   $('track').textContent = track.title;
   $('artist').textContent = track.artist;
   $('next-title').textContent = next.title;
@@ -66,6 +59,8 @@ function trackInfo() {
   if ('mediaSession' in navigator && 'MediaMetadata' in window) {
     navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist, album: 'Rádio Trânsito SP' });
   }
+  const daily = programming.daily();
+  if ($('daily-podcast')) $('daily-podcast').textContent = playlist[daily.index].title;
   progress();
 }
 
@@ -84,8 +79,10 @@ function prepare(element, index, force = false) {
 
 // Dois elementos reutilizados: a próxima faixa já está carregada antes da troca.
 function preloadFollowing() {
-  prepare(standby, wrap(idx + 1));
-  for (const distance of [1, 2]) warmMedia(playlist[wrap(idx + distance)].src);
+  prepare(standby, programming.peek());
+  for (const distance of [1, 2]) warmMedia(playlist[programming.peek(distance)].src);
+  const upcoming = programming.upcoming();
+  if (upcoming && upcoming.inSeconds <= 120) warmMedia(playlist[upcoming.index].src);
 }
 
 function warmMedia(src) {
@@ -150,7 +147,7 @@ function playCurrent(fallbackElement = null) {
       if (fallbackElement && fallbackElement !== current) {
         // Navegadores que bloqueiam o segundo elemento reutilizam o já autorizado.
         singleDeck = true;
-        activate(idx, fallbackElement);
+        activate(idx, fallbackElement, Number(current.dataset.startOffset || 0));
         return;
       }
       wanted = false;
@@ -166,7 +163,7 @@ function playCurrent(fallbackElement = null) {
   });
 }
 
-function activate(index, reuse = null) {
+function activate(index, reuse = null, seek = 0) {
   clearTimeout(failureTimer);
   failureTimer = null;
   cancelAnnouncement();
@@ -182,7 +179,8 @@ function activate(index, reuse = null) {
   current.muted = false;
   for (const element of [current, standby]) element.dataset.current = String(element === current);
   prepare(current, idx);
-  current.currentTime = 0;
+  current.dataset.startOffset = String(seek);
+  if (current.readyState >= 1) current.currentTime = seek;
   lastPosition = -1;
   lastProgress = Date.now();
   trackInfo();
@@ -194,9 +192,9 @@ function activate(index, reuse = null) {
 function failTrack(element) {
   if (element !== current || announcement || failureTimer !== null) return;
   failedSources.add(playlist[idx].src);
-  let next = wrap(idx + 1), searched = 0;
-  while (failedSources.has(playlist[next].src) && ++searched < playlist.length) next = wrap(next + 1);
-  if (searched >= playlist.length) {
+  let next = programming.next(), searched = 0;
+  while (failedSources.has(playlist[next].src) && ++searched < musicTracks.length) next = programming.next();
+  if (searched >= musicTracks.length) {
     wanted = false;
     ++playSequence;
     pendingPlay = false;
@@ -225,7 +223,8 @@ function startProgram() {
   failedSources.clear();
   wanted = true;
   unlockAuxiliaryAudio();
-  if (current.ended) { activate(idx + 1); return; }
+  if (syncSchedule()) return;
+  if (current.ended) { advanceProgram(); return; }
   playCurrent();
 }
 
@@ -233,12 +232,12 @@ $('play').addEventListener('click', () => {
   if (wanted || announcement) pauseProgram();
   else startProgram();
 });
-$('next').addEventListener('click', () => activate(idx + 1));
-$('prev').addEventListener('click', () => activate(idx - 1));
+$('next').addEventListener('click', advanceProgram);
+$('prev').addEventListener('click', previousProgram);
 
 for (const element of [current, standby]) {
   element.addEventListener('ended', () => {
-    if (element === current && wanted && !announcement) activate(idx + 1);
+    if (element === current && wanted && !announcement) advanceProgram();
   });
   element.addEventListener('error', () => failTrack(element));
   element.addEventListener('playing', () => {
@@ -258,7 +257,13 @@ for (const element of [current, standby]) {
   element.addEventListener('waiting', () => {
     if (element === current && wanted && !announcement) status('Carregando o áudio…');
   });
-  element.addEventListener('loadedmetadata', () => { if (element === current) progress(); });
+  element.addEventListener('loadedmetadata', () => {
+    if (element !== current) return;
+    const offset = Number(element.dataset.startOffset || 0);
+    if (offset > 0) element.currentTime = Math.min(offset, Math.max(0, element.duration - 0.1));
+    element.dataset.startOffset = '0';
+    progress();
+  });
   element.addEventListener('timeupdate', () => {
     if (element !== current) return;
     if (element.currentTime !== lastPosition) {
@@ -277,6 +282,45 @@ setInterval(() => {
 // Avisos pausam o elemento atual e o retomam sem recarregar o podcast.
 function canSpeak() {
   return 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
+}
+
+let weatherVoiceName = '';
+try { weatherVoiceName = localStorage.getItem('radio_weather_voice') || ''; } catch (_) {}
+function portugueseVoices() {
+  return canSpeak() ? window.speechSynthesis.getVoices().filter(v => v.lang.replace('_', '-').toLowerCase() === 'pt-br') : [];
+}
+function preferredWeatherVoice(voices) {
+  const male = v => /Ant[oô]nio|Daniel|Felipe|Ricardo|Bruno|Fabr[ií]cio|Thiago|Paulo|Alex/i.test(v.name);
+  return voices.find(v => male(v) && /Natural|Neural/i.test(v.name)) || voices.find(male) ||
+    voices.find(v => /Natural|Neural/i.test(v.name)) || voices.find(v => !/Google/i.test(v.name)) || voices[0];
+}
+function selectedVoice(kind) {
+  const voices = portugueseVoices();
+  if (kind !== 'weather') return voices[0];
+  return voices.find(v => v.name === weatherVoiceName) || preferredWeatherVoice(voices);
+}
+function paintVoices() {
+  const selector = $('weather-voice');
+  if (!selector || !canSpeak()) return;
+  const voices = portugueseVoices(), preferred = preferredWeatherVoice(voices);
+  selector.replaceChildren();
+  const automatic = document.createElement('option');
+  automatic.value = ''; automatic.textContent = preferred ? `Automática — ${preferred.name}` : 'Voz padrão do dispositivo';
+  selector.append(automatic);
+  for (const voice of voices) {
+    const option = document.createElement('option'); option.value = voice.name; option.textContent = voice.name; selector.append(option);
+  }
+  selector.value = voices.some(v => v.name === weatherVoiceName) ? weatherVoiceName : '';
+}
+if ($('weather-voice')) {
+  $('weather-voice').addEventListener('change', event => {
+    weatherVoiceName = event.target.value;
+    try { localStorage.setItem('radio_weather_voice', weatherVoiceName); } catch (_) {}
+  });
+  if (canSpeak()) {
+    window.speechSynthesis.addEventListener?.('voiceschanged', paintVoices);
+    paintVoices();
+  }
 }
 
 function beginAnnouncement(kind) {
@@ -307,7 +351,7 @@ function finishAnnouncement(job) {
   for (const cleanup of [...job.cleanups]) cleanup();
   bulletinAudio.pause();
   if (wanted) {
-    if (current.ended) activate(idx + 1);
+    if (current.ended) advanceProgram();
     else playCurrent();
   } else {
     controls();
@@ -364,7 +408,7 @@ function speakText(text, job) {
     job.utterance = utterance; // Mantém a referência até a fala terminar.
     utterance.lang = 'pt-BR';
     utterance.rate = 1;
-    const voice = synth.getVoices().find(v => v.lang.replace('_', '-').toLowerCase() === 'pt-br');
+    const voice = selectedVoice(job.kind);
     if (voice) utterance.voice = voice;
     utterance.onstart = () => {
       started = true;
@@ -503,6 +547,7 @@ function checkTimeAnnouncement() {
   speakText(timeText(parts), job).finally(() => finishAnnouncement(job));
 }
 function tick() {
+  syncSchedule();
   const parts = radioTime();
   $('clock').textContent = `${parts.hour}:${parts.minute}`;
 }
@@ -511,13 +556,28 @@ setInterval(tick, 1000);
 setInterval(checkTimeAnnouncement, 5000);
 
 if ('mediaSession' in navigator) {
-  for (const [action, handler] of Object.entries({ play: startProgram, pause: pauseProgram, nexttrack: () => activate(idx + 1), previoustrack: () => activate(idx - 1) })) {
+  for (const [action, handler] of Object.entries({ play: startProgram, pause: pauseProgram, nexttrack: advanceProgram, previoustrack: previousProgram })) {
     try { navigator.mediaSession.setActionHandler(action, handler); } catch (_) {}
   }
 }
 
-const podcastStarts = playlist.map((track, index) => track.type === 'podcast' ? index : -1).filter(index => index >= 0);
-idx = podcastStarts[Math.floor(Math.random() * podcastStarts.length)];
+function advanceProgram() { activate(programming.next()); }
+function previousProgram() {
+  activate(programming.previous(playlist[idx].type === 'podcast'));
+}
+function syncSchedule() {
+  const daily = programming.daily();
+  if ($('daily-podcast')) $('daily-podcast').textContent = playlist[daily.index].title;
+  const upcoming = programming.upcoming();
+  if (upcoming && upcoming.inSeconds <= 120) warmMedia(playlist[upcoming.index].src);
+  if (!wanted) return false;
+  const slot = programming.slot();
+  if (!programming.claim(slot)) return false;
+  activate(slot.index, null, slot.offset);
+  return true;
+}
+
+idx = programming.next();
 current.dataset.current = 'true';
 standby.dataset.current = 'false';
 prepare(current, idx);
@@ -532,8 +592,10 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
   try {
     window.RadioWeather.create({
       isListening: () => wanted,
+      unlockVoice: unlockAuxiliaryAudio,
       canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
-      announce: async text => {
+      announce: async (text, snapshot, stillValid = () => true) => {
+        if (!stillValid() || announcement || pendingPlay) return false;
         const job = beginAnnouncement('weather');
         if (!job) return false;
         try {
