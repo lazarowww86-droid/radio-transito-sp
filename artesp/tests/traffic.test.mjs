@@ -91,6 +91,21 @@ test('respostas HTTP 200 com JSON inválido, carimbo vencido ou schema incorreto
     const a=gateway({runtime:{async fetch(){this.calls.push({});return response.clone();}}});const result=await a.instance.get();assert.equal(result.status,503);assert.deepEqual(result.body.items,[]);
   }
 });
+test('diagnóstico distingue resposta recusada, JSON e carimbo, sem vazar o corpo ou a chave', async () => {
+  for(const [response,code] of [[new Response(env.ARTESP_API_KEY), 'INVALID_JSON'], [new Response(env.ARTESP_API_KEY,{status:500}),'UPSTREAM_500'], [Response.json({...fixture(),meta:{...fixture().meta,timestamp:env.ARTESP_API_KEY}}),'INVALID_TIMESTAMP']]) {
+    const a=gateway({runtime:{async fetch(){this.calls.push({});return response.clone();}}});
+    const result=await a.instance.get();assert.equal(result.body.diagnostic.code,code);
+    assert.ok(!JSON.stringify(result).includes(env.ARTESP_API_KEY));
+    const cached=await a.instance.get();assert.deepEqual(cached.body.diagnostic,result.body.diagnostic);assert.equal(a.runtime.calls.length,1);
+  }
+});
+test('erro de rede ou timeout com texto privado não aparece no diagnóstico',async()=>{
+  for(const name of ['Error','TimeoutError']){
+    const a=gateway({runtime:{async fetch(){this.calls.push({});const error=new Error(env.ARTESP_API_KEY);error.name=name;throw error;}}});
+    const result=await a.instance.get();assert.equal(result.body.diagnostic.code,name==='Error'?'UPSTREAM_NETWORK':'UPSTREAM_TIMEOUT');
+    assert.ok(!JSON.stringify(result).includes(env.ARTESP_API_KEY));
+  }
+});
 test('tentativas com falha não podem ultrapassar 12 em uma hora', async () => {
   const a=gateway();a.runtime.mode=500;
   for(let n=0;n<80;n++){await a.instance.get();a.runtime.at+=MIN_INTERVAL;}

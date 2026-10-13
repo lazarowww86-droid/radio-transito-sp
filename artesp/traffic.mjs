@@ -80,6 +80,33 @@ export function retryDelay(value, now = Date.now()) {
   return Math.min(24 * HOUR, Math.max(MIN_INTERVAL, Number.isFinite(delay) ? delay : HOUR));
 }
 
+// Somente códigos conhecidos, tipos e contagens; nunca cabeçalhos privados,
+// corpo bruto da API ou mensagens de exceção que possam conter credenciais.
+function failureDetail(error, phase, response, payload) {
+  const known = new Set(['INVALID_TIMESTAMP', 'INVALID_PAYLOAD', 'INVALID_FILTER', 'NO_VALID_RECORDS', 'RESPONSE_TOO_LARGE', 'INVALID_JSON']);
+  const message = error?.message;
+  const code = known.has(message) || /^UPSTREAM_[1-5]\d{2}$/.test(message || '') ? message :
+    error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_NETWORK';
+  const type = value => value === undefined ? 'missing' : value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+  const numeric = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
+  const timestamp = payload?.meta?.timestamp;
+  const safeStamp = typeof timestamp === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})?$/.test(timestamp) ? timestamp : null;
+  const contentType = response?.headers?.get('Content-Type')?.split(';')[0]?.trim()?.toLowerCase();
+  const httpDate = response?.headers?.get('Date');
+  const safeHttpDate = typeof httpDate === 'string' && /^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(httpDate) && Number.isFinite(Date.parse(httpDate)) ? new Date(httpDate).toISOString() : null;
+  const rows = Array.isArray(payload?.results) ? payload.results.slice(0, 100) : [];
+  return { code, phase, upstream_status: response?.status || null, upstream_content_type: ['application/json','text/html','text/plain'].includes(contentType) ? contentType : 'other', upstream_http_date: safeHttpDate,
+    schema: { meta_type: type(payload?.meta), results_type: type(payload?.results), count_type: type(payload?.meta?.count), count: numeric(payload?.meta?.count),
+      offset_type: type(payload?.meta?.offset), offset: numeric(payload?.meta?.offset), timestamp_type: type(timestamp), timestamp: safeStamp,
+      timestamp_has_timezone: typeof timestamp === 'string' && /(Z|[+-]\d{2}:\d{2})$/.test(timestamp), results_count: rows.length,
+      active_exact: rows.filter(r => r?.status === 'ativa').length, active_case_insensitive: rows.filter(r => typeof r?.status === 'string' && r.status.toLowerCase() === 'ativa').length,
+      supported_class: rows.filter(r => ['Acidente', 'Evento natural', 'Obra', 'Ocorrência'].includes(r?.classe)).length,
+      road_object: rows.filter(r => r?.rodovia && typeof r.rodovia === 'object' && typeof r.rodovia.nome === 'string').length,
+      municipalities_array: rows.filter(r => Array.isArray(r?.municipios)).length,
+      municipalities_with_ibge: rows.filter(r => Array.isArray(r?.municipios) && r.municipios.some(m => /^\d{7}$/.test(String(m?.cod_ibge)))).length,
+      without_end_time: rows.filter(r => !r?.dt_hr_termino).length } };
+}
+
 export class TrafficGateway {
   constructor(storage, env, runtime = {}) {
     this.storage = storage; this.env = env;
@@ -104,11 +131,11 @@ export class TrafficGateway {
     state.attempts = state.attempts.filter(at => at > now - HOUR && at <= now);
     const quotaAt = state.attempts.length >= MAX_CALLS ? state.attempts[0] + HOUR + 1000 : 0;
     const nextAt = Math.max(state.nextAt, quotaAt);
-    if (now < nextAt) return { status: 503, retry: Math.ceil((nextAt - now) / 1000), body: { error: state.failure || 'Consulta compartilhada aguardando a próxima janela.', items: [], updated_at: null } };
-    state.snapshot = null; state.failure = null; state.attempts.push(now); state.nextAt = now + MIN_INTERVAL;
+    if (now < nextAt) return { status: 503, retry: Math.ceil((nextAt - now) / 1000), body: { error: state.failure || 'Consulta compartilhada aguardando a próxima janela.', diagnostic: state.diagnostic || null, items: [], updated_at: null } };
+    state.snapshot = null; state.failure = null; state.diagnostic = null; state.attempts.push(now); state.nextAt = now + MIN_INTERVAL;
     // Persiste a tentativa antes de acessar a API, inclusive em caso de timeout/reinício.
     await this.storage.put('gateway', state);
-    let response;
+    let response, payload, phase = 'request';
     try {
       response = await this.fetch(apiURL(config, now), { headers: { Authorization: 'Api-Key ' + key, Accept: 'application/json' }, redirect: 'manual', signal: AbortSignal.timeout(8000), cache: 'no-store' });
       if (!response.ok) throw new Error('UPSTREAM_' + response.status);
@@ -116,12 +143,16 @@ export class TrafficGateway {
       if (length && Number(length) > 2 * 1024 * 1024) throw new Error('RESPONSE_TOO_LARGE');
       const raw = await response.text();
       if (raw.length > 2 * 1024 * 1024) throw new Error('RESPONSE_TOO_LARGE');
-      state.snapshot = bulletin(JSON.parse(raw), config, this.now());
+      phase = 'decode';
+      try { payload = JSON.parse(raw); } catch (_) { throw new Error('INVALID_JSON'); }
+      phase = 'validate';
+      state.snapshot = bulletin(payload, config, this.now());
       state.nextAt = this.now() + INTERVAL;
       if (response.headers.get('X-RateLimit-Remaining') === '0') state.nextAt = Math.max(state.nextAt, this.now() + retryDelay(response.headers.get('Retry-After'), this.now()));
     } catch (error) {
       state.snapshot = null;
-      const code = error.message;
+      state.diagnostic = failureDetail(error, phase, response, payload);
+      const code = state.diagnostic.code;
       state.failure = code === 'UPSTREAM_401' ? 'A ARTESP recusou a chave. Confira o segredo e o produto Ocorrências Rodoviárias.' :
         code === 'UPSTREAM_403' ? 'A ARTESP recusou o acesso. Confira os termos aceitos e as restrições de IP no portal.' :
         code === 'UPSTREAM_429' ? 'A cota da ARTESP foi atingida. A próxima consulta aguardará a liberação.' : 'A consulta da ARTESP falhou ou retornou dados inválidos.';
@@ -129,6 +160,6 @@ export class TrafficGateway {
       if (code === 'UPSTREAM_401' || code === 'UPSTREAM_403') state.nextAt = this.now() + INTERVAL;
     }
     await this.storage.put('gateway', state);
-    return state.snapshot ? { status: 200, body: state.snapshot } : { status: 503, retry: Math.ceil((state.nextAt - this.now()) / 1000), body: { error: state.failure, items: [], updated_at: null } };
+    return state.snapshot ? { status: 200, body: state.snapshot } : { status: 503, retry: Math.ceil((state.nextAt - this.now()) / 1000), body: { error: state.failure, diagnostic: state.diagnostic, items: [], updated_at: null } };
   }
 }

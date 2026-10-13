@@ -15,6 +15,8 @@ CORREÇÃO DESTA VERSÃO
 - O modo de redirecionamento é manual; a credencial não segue para outro endereço.
 - O nome no arquivo wrangler.jsonc corresponde ao serviço publicado: radio-transito-sp.
 - O pacote contém somente a pasta artesp. Música, podcasts, previsão e player permanecem nos arquivos atuais do site.
+- A revisão 20261013-artesp-r3 identifica a versão publicada no endereço inicial do serviço.
+- Se a consulta falhar, /boletins inclui diagnostic: código do erro, etapa, status HTTP, tipos de campos e contagens. A chave, os cabeçalhos privados e o corpo bruto da API nunca entram nesse diagnóstico.
 
 As etapas seguintes documentam a instalação completa para referência.
 
@@ -84,11 +86,11 @@ Licença dos dados: CC BY-NC 4.0 — https://creativecommons.org/licenses/by-nc/
 Os dados fornecidos pela API são resumidos em texto para os boletins; a resposta do serviço inclui fonte, link, licença e indicação do recorte.
 
 VALIDAÇÃO DESTA ENTREGA
-- 27 testes do adaptador e das rotas, com respostas e armazenamento simulados.
+- 29 testes do adaptador e das rotas, com respostas e armazenamento simulados, incluindo sigilo dos diagnósticos.
 - Comparação no motor workerd/Miniflare: a versão anterior retorna HTTP 503 antes de consultar a fonte; a corrigida retorna HTTP 200 e mantém uma só consulta ao atender outros 20 ouvintes. A resposta da ARTESP nesse teste é fictícia.
 - 1 teste de compatibilidade com a rádio atual: o boletim pausa e retoma o MP3 no mesmo ponto; erro da fonte não interrompe a reprodução.
 - Empacotamento validado com Wrangler 4.150.0 em modo dry-run.
-- A chave real não foi recebida. O serviço e o segredo já estão no Cloudflare do usuário. A consulta real com esta correção será validada após a atualização automática.
+- A chave real não foi recebida. O serviço e o segredo já estão no Cloudflare do usuário. O build corrigido foi publicado, mas a consulta real ainda retorna erro. Esta revisão permite identificar a causa exata da falha antes de conectar a fonte ao site de todos os ouvintes.
 
 ALTERNATIVA PARA QUEM JÁ USA O TERMINAL
 Na pasta artesp, com Node.js instalado:
