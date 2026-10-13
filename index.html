@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101d">
-<link rel="manifest" href="manifest.json"><link rel="stylesheet" href="styles.css?v=20261013-r2-light"><title>Rádio Trânsito SP — Ao Vivo</title>
+<link rel="manifest" href="manifest.json"><link rel="stylesheet" href="styles.css?v=20261013-r3-weather"><title>Rádio Trânsito SP — Ao Vivo</title>
 </head>
 <body>
 <div class="ambient a1"></div><div class="ambient a2"></div>
@@ -18,6 +18,14 @@
   </div>
 </section>
 <section class="ticker"><div class="ticker-label">TRÂNSITO SP</div><div class="ticker-body"><span class="dot"></span><span id="traffic">Integração com os boletins oficiais em preparação.</span></div><div class="clock" id="clock">--:--</div></section>
+<section class="panel weather-panel" id="weather-panel" aria-labelledby="weather-heading">
+  <div class="panel-head weather-head"><div><span class="kicker">PREVISÃO DO TEMPO</span><h3 id="weather-heading">São Paulo e Guarulhos</h3><p class="weather-frequency">Boletim automático a cada 30 minutos durante a escuta.</p></div><div class="weather-actions"><button id="weather-speak" class="ghost" type="button">OUVIR BOLETIM</button><button id="weather-refresh" class="ghost mini" type="button" aria-label="Atualizar previsão">↻</button></div></div>
+  <div class="weather-cities">
+    <article class="weather-city"><div class="weather-city-head"><h4>São Paulo</h4><span id="weather-sp-symbol" class="weather-symbol" aria-hidden="true">◌</span></div><div class="weather-reading"><strong><span id="weather-sp-temp">--</span><small>°C</small></strong><span id="weather-sp-condition">Consultando previsão…</span></div><dl class="weather-summary"><div><dt>Sensação</dt><dd id="weather-sp-feels">--</dd></div><div><dt id="weather-sp-day">Mín. / máx.</dt><dd id="weather-sp-range">--</dd></div></dl><p class="weather-rain" id="weather-sp-rain">Consultando chance de chuva…</p></article>
+    <article class="weather-city"><div class="weather-city-head"><h4>Guarulhos</h4><span id="weather-gru-symbol" class="weather-symbol" aria-hidden="true">◌</span></div><div class="weather-reading"><strong><span id="weather-gru-temp">--</span><small>°C</small></strong><span id="weather-gru-condition">Consultando previsão…</span></div><dl class="weather-summary"><div><dt>Sensação</dt><dd id="weather-gru-feels">--</dd></div><div><dt id="weather-gru-day">Mín. / máx.</dt><dd id="weather-gru-range">--</dd></div></dl><p class="weather-rain" id="weather-gru-rain">Consultando chance de chuva…</p></article>
+  </div>
+  <p class="weather-status" id="weather-status" role="status">Consultando a previsão…</p><p class="weather-source">Estimativas de modelos meteorológicos • <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> • <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></p>
+</section>
 <section class="grid">
   <article class="panel schedule"><div class="panel-head"><div><span class="kicker">NA PROGRAMAÇÃO</span><h3>Histórias que Marcaram</h3></div><span class="mic">◉</span></div><div class="episode"><span class="num">01</span><div><b>Maníaco do Parque</b><small>Era psicopata ou doente?</small></div><span>DOCUMENTAL</span></div><div class="episode"><span class="num">02</span><div><b>Carandiru</b><small>Do massacre ao indulto</small></div><span>DOCUMENTAL</span></div><div class="episode"><span class="num">03</span><div><b>Caso Isabella Nardoni</b><small>Mídia e perícia</small></div><span>DOCUMENTAL</span></div><div class="episode"><span class="num">04</span><div><b>Chico Picadinho</b><small>Por que continua preso?</small></div><span>DOCUMENTAL</span></div><div class="music-strip"><b>♫</b><div><strong>ENTRE OS PROGRAMAS</strong><span>2 instrumentais retrô • anos 80 & 90</span></div></div></article>
   <article class="panel next"><span class="kicker">A SEGUIR</span><div class="next-art">♫</div><h3 id="next-title">Programação Rádio Trânsito SP</h3><p id="next-type">A programação continua automaticamente.</p><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
@@ -26,5 +34,6 @@
 <details class="settings"><summary>Configuração da fonte de trânsito</summary><div><p>Área administrativa. A chave privada da ARTESP nunca deve ser colocada neste site.</p><input id="feed" type="url" placeholder="https://seu-worker/boletins"><button id="save">SALVAR FONTE</button><p id="feed-status" class="status"></p></div></details>
 </main>
 <footer><div class="brand foot"><div class="logo">RT</div><strong>RÁDIO TRÂNSITO SP</strong></div><p>Projeto experimental independente • não é um serviço oficial de trânsito</p></footer>
-<script src="app.js?v=20261013-r2-light"></script>
+<script src="weather.js?v=20261013-r3-weather"></script>
+<script src="app.js?v=20261013-r3-weather"></script>
 </body></html>

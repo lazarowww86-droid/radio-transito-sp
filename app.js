@@ -290,7 +290,7 @@ function beginAnnouncement(kind) {
   pendingPlay = false;
   current.pause();
   controls();
-  status(kind === 'time' ? 'NO AR • hora certa' : 'NO AR • boletim de trânsito');
+  status(kind === 'time' ? 'NO AR • hora certa' : kind === 'weather' ? 'NO AR • previsão do tempo' : 'NO AR • boletim de trânsito');
   return job;
 }
 
@@ -529,6 +529,31 @@ preloadFollowing();
 trackInfo();
 controls();
 status('Toque em “Ouvir ao vivo” para entrar na programação.');
+
+// A previsão usa a mesma retomada dos avisos; sua consulta não pausa o player.
+if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
+  try {
+    window.RadioWeather.create({
+      isListening: () => wanted,
+      canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
+      announce: async text => {
+        const job = beginAnnouncement('weather');
+        if (!job) return false;
+        try {
+          // Frases curtas mantêm os limites de espera da voz pequenos.
+          const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
+          for (const phrase of phrases) {
+            if (!await speakText(phrase.trim(), job)) return false;
+          }
+          return true;
+        }
+        finally { finishAnnouncement(job); }
+      }
+    });
+  } catch (_) {
+    if ($('weather-status')) $('weather-status').textContent = 'Previsão temporariamente indisponível.';
+  }
+}
 
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
