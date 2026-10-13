@@ -1,23 +1,20 @@
-RÁDIO TRÂNSITO SP — NOTÍCIAS
+VINHETAS — RÁDIO TRÂNSITO SP
 
-1. Extraia 17-ADICIONAR-NOTICIAS.zip.
-2. Abra a página inicial do repositório radio-transito-sp no GitHub.
+1. Extraia 18-ADICIONAR-VINHETAS.zip.
+2. Abra o início do repositório radio-transito-sp no GitHub.
 3. Clique Add file > Upload files.
-4. Arraste os arquivos index.html, styles.css, app.js, news.js e sw.js, junto com a pasta artesp que está DENTRO do ZIP.
-5. Clique Commit changes.
-6. Aguarde a publicação do GitHub Pages e da Cloudflare, conectada ao mesmo repositório.
-7. Abra a rádio e atualize a página. No computador, use Ctrl + Shift + R.
+4. Envie app.js, index.html, sw.js e a pasta media que estão DENTRO do ZIP.
+5. Clique Commit changes. Aguarde a publicação e atualize a página da rádio.
 
-A pasta artesp contém apenas os dois arquivos alterados. Não apague nenhum arquivo ou pasta já existente. Não é necessário enviar músicas novamente, mudar a chave ARTESP ou adicionar configurações na Cloudflare.
+Não apague os arquivos ou a pasta media que já existem. Não envie o ZIP diretamente. Não é necessário enviar músicas novamente ou mudar a chave ARTESP.
 
-Fontes: G1, Metrópoles, Terra e Agência Brasil.
-A página consulta manchetes recentes a cada 30 minutos e oferece links para os portais.
-O botão OUVIR NOTÍCIAS lê até uma manchete por fonte e cita o portal.
-O boletim automático começa após 30 minutos de escuta, aguarda o aviso que estiver no ar e evita repetir os mesmos links.
-A voz depende das vozes disponíveis no aparelho, como nos demais boletins.
-Se uma fonte falhar, as outras continuam; se todas falharem, a programação segue sem notícias antigas ou inventadas.
+Vinhetas:
+- Atenção, motorista... giro pelas rodovias: abertura do boletim de trânsito.
+- Boa viagem... continue com a programação: retorno após o boletim de trânsito.
+- A sua melhor companhia nas ruas e estradas paulistas: identificação ao terminar as notícias e a previsão, antes de retomar a programação.
+- Memória, investigação... Histórias que Marcaram: chamada antes das entradas de podcasts (06:30, 12:00 e 18:30), durante a escuta. Toca aproximadamente 30 segundos antes e não desloca o horário do podcast. Se outro aviso estiver no ar ou o ouvinte entrar já durante o podcast, a chamada não interfere.
 
-São manchetes recentes dos feeds públicos, não um resumo do texto completo nem uma reprodução de toda a reportagem.
-Player, podcasts, clima, consulta ARTESP, ícones e as 56 músicas foram preservados. A versão de app.js usada foi a publicada no momento desta atualização, incluindo as alterações que já estavam no site.
+Os dois arquivos 21_35_42 eram iguais. Uma cópia foi usada. Os áudios 21_34_19 e 21_35_42 reuniam várias falas; os trechos de retorno e identificação foram separados sem cortar palavras. Os arquivos originais enviados não foram modificados.
 
-Se a Cloudflare aparecer com erro após o envio, mantenha sua chave e vínculos atuais e envie uma foto dos registros da publicação. As músicas continuam disponíveis mesmo que o serviço de notícias ainda não tenha sido publicado.
+As vinhetas usam a gravação Roger que você enviou. As informações atualizadas de trânsito, clima e notícias continuam sendo lidas pela voz disponível no aparelho.
+As músicas, podcasts, horários, seleção musical e fontes oficiais foram preservados. Os arquivos novos têm menos de 120 KB cada.

@@ -18,6 +18,12 @@ const programming = window.RadioProgramming.create(
 
 // O estado do botão representa a intenção do ouvinte, inclusive durante avisos.
 const BUILD = '20261013-r2-light';
+const STINGS = {
+  traffic: 'media/vinheta-transito-roger.mp3',
+  back: 'media/vinheta-retorno-roger.mp3',
+  identity: 'media/vinheta-identificacao-roger.mp3',
+  podcast: 'media/vinheta-podcast-roger.mp3'
+};
 let current = $('audio'), standby = $('audio-next');
 const bulletinAudio = $('bulletin-audio');
 let idx = 0, wanted = false, announcement = null, playSequence = 0;
@@ -321,14 +327,14 @@ if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => 
 }
 
 function beginAnnouncement(kind) {
-  if (announcement || !canSpeak()) return null;
+  if (announcement || (kind !== 'promo' && !canSpeak())) return null;
   const job = { kind, cancelled: false, cleanups: new Set() };
   announcement = job;
   ++playSequence;
   pendingPlay = false;
   current.pause();
   controls();
-  status(kind === 'time' ? 'NO AR • hora certa' : kind === 'weather' ? 'NO AR • previsão do tempo' : kind === 'news' ? 'NO AR • notícias' : 'NO AR • boletim de trânsito');
+  status(kind === 'time' ? 'NO AR • hora certa' : kind === 'weather' ? 'NO AR • previsão do tempo' : kind === 'news' ? 'NO AR • notícias' : kind === 'promo' ? 'NO AR • Histórias que Marcaram' : 'NO AR • boletim de trânsito');
   return job;
 }
 
@@ -375,10 +381,12 @@ function playSting(src, job) {
     bulletinAudio.onerror = cancel;
     bulletinAudio.onplaying = () => {
       clearTimeout(timer);
-      timer = setTimeout(cancel, 10000);
+      const duration = bulletinAudio.duration;
+      timer = setTimeout(cancel, Number.isFinite(duration) && duration > 0 ? Math.min(45000, duration * 1000 + 1500) : 25000);
     };
     timer = setTimeout(cancel, 3000);
     bulletinAudio.muted = false;
+    bulletinAudio.dataset.source = src;
     bulletinAudio.src = mediaCache.get(src) || mediaURL(src);
     bulletinAudio.load();
     Promise.resolve(bulletinAudio.play()).catch(cancel);
@@ -645,9 +653,9 @@ async function trafficBulletin() {
     return;
   }
   try {
-    await playSting('media/vinheta-transito-mix.mp3', job);
+    await playSting(STINGS.traffic, job);
     const spoken = await speakText(text, job);
-    if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
+    if (spoken) await playSting(STINGS.back, job);
   } finally { finishAnnouncement(job); }
 }
 
@@ -685,6 +693,7 @@ function checkTimeAnnouncement() {
   speakText(timeText(parts), job).finally(() => finishAnnouncement(job));
 }
 function tick() {
+  checkPodcastPromo();
   syncSchedule();
   const parts = radioTime();
   $('clock').textContent = `${parts.hour}:${parts.minute}`;
@@ -700,6 +709,19 @@ if ('mediaSession' in navigator) {
 }
 
 function advanceProgram() { activate(programming.next()); }
+const podcastPromos = new Set();
+function checkPodcastPromo() {
+  if (!wanted || current.paused || pendingPlay || announcement || current.readyState < 2) return;
+  const upcoming = programming.upcoming();
+  if (!upcoming || upcoming.inSeconds > 30 || upcoming.inSeconds < 20) return;
+  const key = String(Math.floor((Date.now() + upcoming.inSeconds * 1000) / 60000));
+  if (podcastPromos.has(key)) return;
+  const job = beginAnnouncement('promo');
+  if (!job) return;
+  podcastPromos.add(key);
+  if (podcastPromos.size > 12) podcastPromos.delete(podcastPromos.values().next().value);
+  playSting(STINGS.podcast, job).finally(() => finishAnnouncement(job));
+}
 function previousProgram() {
   activate(programming.previous(playlist[idx].type === 'podcast'));
 }
@@ -719,7 +741,8 @@ idx = programming.next();
 current.dataset.current = 'true';
 standby.dataset.current = 'false';
 prepare(current, idx);
-bulletinAudio.src = mediaURL('media/vinheta-transito-mix.mp3');
+bulletinAudio.src = mediaURL(STINGS.traffic);
+for (const src of Object.values(STINGS)) warmMedia(src);
 preloadFollowing();
 trackInfo();
 controls();
@@ -742,6 +765,7 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
           for (const phrase of phrases) {
             if (!await speakText(phrase.trim(), job)) return false;
           }
+          if (stillValid()) await playSting(STINGS.identity, job);
           return true;
         }
         finally { finishAnnouncement(job); }
@@ -765,6 +789,7 @@ if (window.RadioNews && typeof window.RadioNews.create === 'function') {
         if (!job) { if ($('news-status')) $('news-status').textContent = 'A leitura de notícias não está disponível neste dispositivo.'; return false; }
         try {
           for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
+          if (stillValid()) await playSting(STINGS.identity, job);
           return true;
         } finally { finishAnnouncement(job); }
       }
