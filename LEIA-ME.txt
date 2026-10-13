@@ -1,35 +1,37 @@
-RÁDIO TRÂNSITO SP — PREVISÃO DO TEMPO: SÃO PAULO E GUARULHOS
+RÁDIO TRÂNSITO SP — ATUALIZAÇÃO DAS MÚSICAS
+Versão da interface: 20261013-r4-music
 
-COMO ATUALIZAR
-1. Extraia 05-ATUALIZACAO-PREVISAO-DO-TEMPO.zip.
-2. Abra a página principal do repositório radio-transito-sp no GitHub.
-3. Clique em Add file > Upload files.
-4. Envie TODOS os arquivos extraídos diretamente na raiz do repositório, substituindo os atuais, e confirme em Commit changes.
-5. Após a publicação, recarregue o site: Ctrl+F5 no computador; no celular, recarregue a página e reabra o aplicativo.
+O QUE MUDOU
+- As 20 músicas enviadas (faixas 2 a 21) substituem os dois instrumentais.
+- Tocam duas músicas entre cada podcast, seguindo a ordem das faixas do CD.
+- O rodízio percorre todas as 20 músicas antes de repetir a seleção musical.
+- As faixas aparecem como "Faixa 2", "Faixa 3" etc., pois o CD foi copiado sem nomes de músicas e artistas.
+- MP3 mono, 48 kbps, 22.050 Hz: compressão forte, com perda de fidelidade e de estéreo em relação ao original.
+- Foram retirados apenas silêncios das pontas; não houve cortes no conteúdo musical ou nos intervalos internos das faixas.
+- Os podcasts, as vinhetas, os boletins, o relógio e a previsão de São Paulo/Guarulhos continuam presentes.
 
-Este pacote contém só arquivos pequenos do site. A pasta media atual, com os áudios leves, já serve para esta atualização. O projeto completo atualizado também está disponível em RADIO-TRANSITO-SP-LEVE.zip.
+COMO ATUALIZAR O GITHUB
+1. Baixe e extraia 06-MUSICAS-PARTE-1.zip, 07-MUSICAS-PARTE-2.zip e 08-MUSICAS-PARTE-3.zip.
+2. Em cada pacote há uma pasta media. Na raiz do repositório, use Add file > Upload files e arraste essa pasta media. Ela será mesclada à pasta media que já existe. Faça o commit de cada parte.
+3. Depois das três partes de músicas, extraia 09-ATUALIZACAO-DA-RADIO.zip.
+4. Envie TODOS os arquivos extraídos do pacote 09 na raiz do repositório, substituindo os atuais, e confirme o commit.
+5. Aguarde a atualização do GitHub Pages. Abra o site e pressione Ctrl + F5.
+6. Para testar as músicas imediatamente, use Próximo: depois do podcast vem a identificação e depois as músicas.
 
-O QUE ENTRA NA RÁDIO
-- Painel de São Paulo e Guarulhos com temperatura estimada, sensação térmica, condições do céu, mínima, máxima e chance de chuva.
-- Durante o dia, mostra mínima e máxima de hoje. A partir das 18h, mostra a previsão de amanhã.
-- Boletim falado das duas cidades a cada 30 minutos durante a escuta. O primeiro boletim automático entra após cerca de 30 minutos ouvindo; o botão OUVIR BOLETIM permite ouvir antes.
-- O botão de seta atualiza os dados do painel.
-- Usa a mesma voz da hora certa, em frases curtas.
+IMPORTANTE
+- Envie o CONTEÚDO EXTRAÍDO dos pacotes, não os ZIPs.
+- Não crie uma pasta media dentro de outra pasta media: os arquivos novos devem ficar em media/musica-faixa-02.mp3, media/musica-faixa-03.mp3 e assim por diante.
+- Os pacotes 06, 07 e 08 contêm apenas as músicas novas. Mantenha os podcasts e as vinhetas que já estão no GitHub.
+- Os pacotes não excluem arquivos antigos no GitHub. Os instrumentais já não são usados pela programação. Para também apagar esses arquivos do repositório, exclua somente media/instrumental-retro-80.mp3 e media/instrumental-pop-90.mp3.
+- A nova versão remove esses dois instrumentais do cache local e preserva os áudios antigos que continuam sendo usados.
+- RADIO-TRANSITO-SP-LEVE.zip é o backup completo atualizado; use os pacotes menores acima para a atualização.
 
-CONTINUIDADE
-A consulta acontece enquanto a programação toca. O podcast só pausa quando os dados estão prontos para leitura. Depois do boletim, volta ao mesmo ponto. Pausar ou avançar cancela a fala. Pausar durante a consulta também evita iniciar a voz depois.
+PREVISÃO DO TEMPO
+A previsão de São Paulo e Guarulhos continua automática a cada 30 minutos de escuta e também pode ser ouvida pelo botão OUVIR BOLETIM. A consulta de dados não interrompe o áudio; após a fala, a programação retoma do mesmo ponto.
+Fonte: Open-Meteo, com atribuição CC BY 4.0 na página. A integração usa o acesso gratuito destinado a uso não comercial. Publicidade ou assinaturas exigem reavaliar os termos do fornecedor.
 
-Se outro aviso estiver no ar, o boletim automático espera. Se a consulta falhar ou os dados estiverem vencidos, a rádio segue sua programação. Sem conexão, os áudios previamente armazenados continuam disponíveis; a previsão depende de acesso à fonte.
-
-FONTE
-Open-Meteo, com dados estimados por modelos meteorológicos. A chance exibida é o maior percentual previsto para os próximos três horários futuros disponíveis, dentro de três horas. Não é uma soma das probabilidades.
-https://open-meteo.com/en/docs
-https://open-meteo.com/en/terms
-
-A API gratuita é destinada a uso não comercial. Os créditos à Open-Meteo e à licença CC BY 4.0 estão no painel. Não é necessário cadastrar chave de API para este uso. Publicidade ou assinaturas exigem rever os termos da fonte.
-
-TESTES
-No projeto completo:
+TESTES INCLUÍDOS NO BACKUP
 node tests/player.test.cjs
+node tests/music.test.cjs
 node tests/weather.test.cjs
 node tests/service-worker.test.cjs

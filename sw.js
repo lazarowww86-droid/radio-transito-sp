@@ -1,4 +1,4 @@
-const BUILD = '20261013-r3-weather';
+const BUILD = '20261013-r4-music';
 const MEDIA_BUILD = '20261013-r2-light';
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);
@@ -19,7 +19,15 @@ self.addEventListener('activate', event => {
     .filter(key => key !== SHELL && key !== MEDIA &&
       (key.startsWith(`${PREFIX}${SCOPE}-`) || /^radio-transito-sp-v\d/.test(key)))
     .map(key => caches.delete(key))))
-    .then(() => self.clients.claim()));
+    .then(async () => {
+      const cache = await caches.open(MEDIA);
+      const obsolete = ['instrumental-retro-80.mp3', 'instrumental-pop-90.mp3']
+        .map(file => new URL(`./media/${file}`, self.registration.scope).pathname);
+      for (const request of await cache.keys()) {
+        if (obsolete.includes(new URL(request.url).pathname)) await cache.delete(request);
+      }
+      return self.clients.claim();
+    }));
 });
 
 // Áudios pedem intervalos de bytes. O arquivo completo em cache precisa

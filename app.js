@@ -2,29 +2,26 @@
 'use strict';
 const $ = id => document.getElementById(id);
 
-// Programação: abertura -> podcast -> identificação -> 2 músicas -> identificação -> podcast -> ...
-const playlist=[
- {type:'vinheta',title:'Rádio Trânsito SP — Abertura',artist:'Vinheta da rádio',src:'media/vinheta-abertura-mix.mp3'},
+// Duas músicas entre os podcasts; o rodízio percorre todas as faixas do CD.
+const podcasts = [
  {type:'podcast',title:'Maníaco do Parque: era psicopata ou doente?',artist:'Histórias que Marcaram',src:'media/maniaco-do-parque.mp3'},
- {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
- {type:'music',title:'Instrumental Retrô 80',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-retro-80.mp3'},
- {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
- {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
  {type:'podcast',title:'Carandiru: do massacre ao indulto',artist:'Histórias que Marcaram',src:'media/carandiru.mp3'},
- {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
- {type:'music',title:'Instrumental Retrô 80',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-retro-80.mp3'},
- {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
- {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
  {type:'podcast',title:'Caso Isabella Nardoni: mídia e perícia',artist:'Histórias que Marcaram',src:'media/isabella-nardoni.mp3'},
- {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
- {type:'music',title:'Instrumental Retrô 80',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-retro-80.mp3'},
- {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
- {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
- {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3'},
- {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'},
- {type:'music',title:'Instrumental Retrô 80',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-retro-80.mp3'},
- {type:'music',title:'Instrumental Pop 90',artist:'Composição instrumental original • Rádio Trânsito SP',src:'media/instrumental-pop-90.mp3'},
+ {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3'}
 ];
+const musicTracks = Array.from({ length: 20 }, (_, index) => {
+ const number = index + 2;
+ return {type:'music',title:`Faixa ${number}`,artist:'Seleção musical • Rádio Trânsito SP',src:`media/musica-faixa-${String(number).padStart(2, '0')}.mp3`};
+});
+const identification = {type:'vinheta',title:'Rádio Trânsito SP',artist:'Identificação',src:'media/vinheta-identificacao-mix.mp3'};
+const playlist = [{type:'vinheta',title:'Rádio Trânsito SP — Abertura',artist:'Vinheta da rádio',src:'media/vinheta-abertura-mix.mp3'}];
+let blocks = podcasts.length;
+while (blocks * 2 % musicTracks.length !== 0) blocks += podcasts.length;
+for (let block = 0; block < blocks; block++) {
+ playlist.push(podcasts[block % podcasts.length], identification,
+  musicTracks[block * 2 % musicTracks.length], musicTracks[(block * 2 + 1) % musicTracks.length]);
+ if (block < blocks - 1) playlist.push(identification);
+}
 
 // O estado do botão representa a intenção do ouvinte, inclusive durante avisos.
 const BUILD = '20261013-r2-light';
@@ -65,7 +62,7 @@ function trackInfo() {
   $('track').textContent = track.title;
   $('artist').textContent = track.artist;
   $('next-title').textContent = next.title;
-  $('next-type').textContent = next.type === 'podcast' ? 'Podcast • Histórias que Marcaram' : next.type === 'music' ? 'Faixa instrumental • programação musical' : 'Identificação da Rádio Trânsito SP';
+  $('next-type').textContent = next.type === 'podcast' ? 'Podcast • Histórias que Marcaram' : next.type === 'music' ? 'Música • seleção musical' : 'Identificação da Rádio Trânsito SP';
   if ('mediaSession' in navigator && 'MediaMetadata' in window) {
     navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist, album: 'Rádio Trânsito SP' });
   }
