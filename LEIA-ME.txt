@@ -1,38 +1,39 @@
-RÁDIO TRÂNSITO SP — ATUALIZAÇÃO 13: PÁGINA SIMPLES E ÍCONE NOVO
+RÁDIO TRÂNSITO SP — ADICIONAR 16 MÚSICAS DE ROUPA NOVA
 
-COMO ENVIAR ESTA ATUALIZAÇÃO
-1. Extraia 13-ATUALIZACAO-VISUAL-RADIO.zip.
-2. Abra https://github.com/lazarowww86-droid/radio-transito-sp
+COMO ENVIAR AO GITHUB
+1. Extraia 14-ADICIONAR-ROUPA-NOVA.zip no computador.
+2. Abra a página INICIAL do repositório: https://github.com/lazarowww86-droid/radio-transito-sp
 3. Clique em Add file > Upload files.
-4. Arraste TODOS os arquivos que estão DENTRO do ZIP extraído para a raiz do repositório. Não envie o ZIP nem a pasta externa da extração.
+4. Arraste TODOS os arquivos e a pasta media que estão DENTRO do ZIP extraído.
+   Envie na raiz do repositório, não de dentro da pasta media.
+   Não envie o ZIP nem a pasta externa criada pela extração.
 5. Clique em Commit changes e aguarde a publicação.
 6. No computador, abra a rádio e pressione Ctrl + F5. No celular, feche e abra a rádio novamente.
 
-O QUE MUDA
-- Removido o painel de configuração manual, o campo de endereço e o botão SALVAR FONTE.
-- O botão de trânsito passa a se chamar OUVIR BOLETIM.
-- A ARTESP continua conectada automaticamente, com consultas a cada 15 minutos durante a página aberta.
-- Um endereço alternativo salvo por versões antigas deixa de substituir a fonte oficial.
-- Ícone próprio de rádio, com fundo azul-escuro, verde, play e ondas de transmissão. Substitui o emoji anterior.
-- Arquivos PNG para instalação em Android e iPhone, incluindo a versão que se adapta aos formatos do Android.
-- O novo ícone também aparece na aba do navegador.
+O QUE ESTA ATUALIZAÇÃO CONTÉM
+- As 16 novas músicas de Roupa Nova, compactadas em MP3 mono, 48 kbps, 22.050 Hz, no mesmo padrão usado anteriormente.
+- Nomes de músicas e artista na programação e nos próprios arquivos MP3.
+- Seleção com 36 músicas: as 20 anteriores e as 16 novas.
+- Reprodução aleatória, sem repetição até completar cada ciclo.
+- Todos os áudios anteriores permanecem com os mesmos nomes e bytes. O envio apenas adiciona os arquivos novos à pasta media.
 
-ÍCONE DE UM APLICATIVO JÁ INSTALADO
-A mudança precisa ser publicada primeiro. A atualização do ícone na tela inicial depende do navegador e do sistema. Alguns navegadores pedem confirmação da mudança de ícone. O pacote mantém o nome e o endereço de abertura da rádio.
-
-PROGRAMAÇÃO PRESERVADA
-- 20 músicas aleatórias, sem repetição até completar cada seleção.
-- Podcast do dia às 06:30, 12:00 e 18:30, no horário de São Paulo.
-- Previsão para São Paulo e Guarulhos a cada 30 minutos durante a escuta.
-- Hora certa, vinhetas, pausa e retomada no mesmo ponto.
-- Todos os áudios e o cache das músicas foram preservados.
+TAMANHOS
+Os áudios recebidos tinham 61,47 MB; as versões compactadas totalizam 23,09 MB.
+A maior música tem cerca de 1,75 MB. O limite de envio pelo navegador do GitHub é 25 MiB por arquivo; cada MP3 deste pacote fica abaixo desse limite.
+Fonte: https://docs.github.com/pt/repositories/working-with-files/managing-files/adding-a-file-to-a-repository
 
 VERIFICAÇÕES
-- 54 testes do site passaram: player, trânsito, previsão, programação, músicas e funcionamento offline.
-- Chromium com MP3 real: play, pausa e OUVIR BOLETIM retomam a mesma música no mesmo ponto.
-- Atualização do aplicativo da revisão r6 para r7 preserva o cache dos MP3s.
-- Ícones 192, 512 e 180 pixels carregam; desenho cabe na área segura da máscara Android.
-- Página conferida em larguras de 390 e 1440 pixels, sem erros JavaScript.
-- A integração r4 da ARTESP foi confirmada com resposta real em 13/10/2026 às 14:49. O serviço permanece sem alterações nesta atualização visual.
+- Todas as 16 faixas foram decodificadas por inteiro. A quantidade de amostras de áudio foi preservada pela compactação, sem corte da música.
+- 54 verificações do site passaram.
+- Chromium reproduziu as 36 músicas em um ciclo completo, incluindo as 16 novas, sem repetição, usando os MP3s reais.
+- Play, pausa, retomada após boletim, horários dos podcasts e funcionamento offline conferidos.
+- Zero erros JavaScript no teste de navegador.
 
-Este ZIP contém somente os arquivos da atualização visual. Não inclui áudios. A versão completa permanece no arquivo RADIO-TRANSITO-SP-LEVE.zip.
+MANTIDO
+- Quatro podcasts e seus horários: 06:30, 12:00 e 18:30, em São Paulo.
+- Previsão, hora certa, vinhetas e boletins ARTESP.
+- Ícone novo e página sem Salvar fonte.
+- O código do player, a programação, a previsão e o serviço ARTESP não foram alterados.
+
+Veja RELATORIO-ROUPA-NOVA.txt para os títulos e o método de identificação.
+O arquivo RADIO-TRANSITO-SP-LEVE.zip é o backup completo, não o pacote recomendado para este envio.
