@@ -1,18 +1,22 @@
-RÁDIO TRÂNSITO SP — HORA, PREVISÃO E TRÂNSITO
+RÁDIO TRÂNSITO SP — COMPATIBILIDADE DA VOZ NO CELULAR
 
-Este pacote já inclui a correção 20 de leitura do trânsito.
-Extraia 21-CORRIGIR-HORA-E-PREVISAO.zip.
-No início do repositório radio-transito-sp, clique Add file > Upload files.
-Envie app.js, weather.js, index.html e sw.js que estão dentro do ZIP.
+Extraia 22-CORRIGIR-VOZ-CELULAR.zip.
+Envie app.js, weather.js, index.html e sw.js na raiz do repositório radio-transito-sp, em Add file > Upload files.
 Clique Commit changes e aguarde a publicação.
-Atualize a rádio (no computador, Ctrl + Shift + R), toque em OUVIR AO VIVO e deixe tocando.
+Não precisa reenviar áudios ou mudar a configuração da Cloudflare.
 
-- Hora: primeira entrada após iniciar a escuta e próximas nos intervalos de dez minutos. Se outro aviso estiver no ar, aguarda e anuncia o horário atual.
-- Previsão: primeira entrada após aproximadamente um minuto de escuta, próximas a cada 30 minutos.
-- A voz é preparada com a música tocando; falhas não contam como transmissão bem-sucedida.
-- Notícias também usam a preparação da voz, mantendo os horários que já existiam.
-- Trânsito: vinheta após confirmar voz disponível, informações em trechos curtos e vinheta de retorno.
+No Samsung, após publicar, abra no navegador:
+https://lazarowww86-droid.github.io/radio-transito-sp/?v=22
+Recarregue essa página uma vez e toque em OUVIR AO VIVO.
 
-Todos os avisos respeitam a pausa do ouvinte. Horário de Brasília.
-Nenhum MP3 precisa ser enviado novamente. Os cinco podcasts, 56 músicas, vinhetas, notícias e ARTESP continuam preservados.
-Nenhuma configuração de chave ou da Cloudflare muda.
+Mudanças:
+- Remove a etapa silenciosa que fazia a leitura depender de eventos que alguns motores móveis não enviam.
+- Envia a hora diretamente durante o toque no Play, respeitando a interação do usuário com o navegador.
+- A leitura também acompanha o estado de fala quando o evento onstart não é emitido.
+- Exibe mensagem compreensível quando o serviço de voz do navegador recusa ou falha.
+- Inclui as correções anteriores de previsão inicial, hora, trânsito e retomada.
+
+Preserva as músicas, os cinco podcasts, as vinhetas, os horários e as fontes.
+
+Validação realizada: testes de programação/player; testes de motor sem eventos de início e que rejeita falas silenciosas; navegador Chromium real, sem simular a voz ou desativar a política de autoplay.
+O navegador real deste ambiente não tem vozes instaladas: verificou-se o envio da fala em um clique real, sem pedidos silenciosos, e a exibição da falha nativa. Isso NÃO comprova a reprodução audível no Samsung. A confirmação do som depende do teste no aparelho.

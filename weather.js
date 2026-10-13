@@ -168,7 +168,7 @@ function create(hooks) {
       const said = await hooks.announce(text(snapshot), snapshot, () => revision === interaction && (!wasListening || hooks.isListening()) && fresh(snapshot));
       if (revision !== interaction) return;
       nextAt = Date.now() + (said ? INTERVAL : RETRY);
-      if (!said) message('A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
+      if (!said) message(hooks.voiceFailure?.() || 'A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
     } catch (_) {
       if (revision === interaction) message('Não foi possível ler o boletim. Consulte a previsão no painel.');
       if (!manual) nextAt = Date.now() + RETRY;

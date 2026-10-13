@@ -229,9 +229,10 @@ function startProgram() {
   failedSources.clear();
   wanted = true;
   unlockAuxiliaryAudio();
-  if (syncSchedule()) return;
-  if (current.ended) { advanceProgram(); return; }
+  if (syncSchedule()) { if (navigator.userActivation?.isActive) checkTimeAnnouncement(true); return; }
+  if (current.ended) { advanceProgram(); if (navigator.userActivation?.isActive) checkTimeAnnouncement(true); return; }
   playCurrent();
+  if (navigator.userActivation?.isActive) checkTimeAnnouncement(true);
 }
 
 $('play').addEventListener('click', () => {
@@ -289,7 +290,19 @@ function canSpeak() {
   return 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
 }
 
-let weatherVoiceName = '';
+let weatherVoiceName = '', lastSpeechIssue = '';
+function speechFailureMessage() {
+  const messages = {
+    'not-allowed': 'O navegador bloqueou a voz dos avisos. Toque em OUVIR BOLETIM para autorizar a leitura.',
+    'language-unavailable': 'A voz em português não está disponível neste aparelho. Confira a opção Saída de texto para voz nas configurações do celular.',
+    'voice-unavailable': 'A voz escolhida não está disponível neste aparelho. Selecione a voz automática ou confira a opção Saída de texto para voz.',
+    'synthesis-unavailable': 'O serviço de voz do aparelho está indisponível. Confira a opção Saída de texto para voz nas configurações do celular.',
+    'synthesis-failed': 'O serviço de voz do aparelho não conseguiu ler o aviso. Confira a opção Saída de texto para voz nas configurações do celular.',
+    'network': 'A voz não conseguiu se conectar. Confira a conexão ou use uma voz instalada no aparelho.',
+    'no-start': 'O navegador não iniciou a voz dos avisos. Toque em OUVIR BOLETIM para tentar a leitura diretamente.'
+  };
+  return messages[lastSpeechIssue] || 'Não foi possível reproduzir a voz dos avisos neste navegador. As informações continuam disponíveis na página.';
+}
 try { weatherVoiceName = localStorage.getItem('radio_weather_voice') || ''; } catch (_) {}
 function portugueseVoices() {
   return canSpeak() ? window.speechSynthesis.getVoices().filter(v => v.lang.replace('_', '-').toLowerCase() === 'pt-br') : [];
@@ -394,23 +407,11 @@ function playSting(src, job) {
   });
 }
 
-async function prepareAnnouncementVoice(job) {
-  const original = current;
-  const endDuringPreparation = () => finishAnnouncement(job);
-  const removeListener = () => original.removeEventListener('ended', endDuringPreparation);
-  original.addEventListener('ended', endDuringPreparation);
-  job.cleanups.add(removeListener);
-  try {
-    const voices = portugueseVoices();
-    const preferred = job.kind === 'weather' ? selectedVoice('weather') : voices.find(voice => voice.localService) || voices[0] || null;
-    const local = voices.find(voice => voice.localService);
-    const candidates = [...new Set([preferred, local, null].filter(voice => voice !== undefined))];
-    for (const voice of candidates) {
-      if (announcement !== job || job.cancelled) return null;
-      if (await speakText('Boletim.', job, { voice, volume: 0, requireStart: true, startTimeout: 7000 })) return { voice };
-    }
-    return null;
-  } finally { removeListener(); job.cleanups.delete(removeListener); }
+function prepareAnnouncementVoice(job) {
+  // Usa a fala real; uma fala com volume zero não comprova o funcionamento no celular.
+  const voices = portugueseVoices();
+  const voice = job.kind === 'weather' ? selectedVoice('weather') : voices.find(v => v.localService) || voices[0] || null;
+  return { voice };
 }
 
 function speakText(text, job, options = {}) {
@@ -426,9 +427,11 @@ function speakText(text, job, options = {}) {
       utterance.onstart = utterance.onend = utterance.onerror = null;
       job.cleanups.delete(cancel);
       if (!ok) synth.cancel();
+      else lastSpeechIssue = '';
       resolve(ok);
     };
     const cancel = () => finish(false);
+    const timedOut = () => { lastSpeechIssue = started ? 'stalled' : 'no-start'; cancel(); };
     job.cleanups.add(cancel);
     job.utterance = utterance; // Mantém a referência até a fala terminar.
     utterance.lang = 'pt-BR';
@@ -436,16 +439,21 @@ function speakText(text, job, options = {}) {
     utterance.volume = options.volume ?? 1;
     const voice = Object.hasOwn(options, 'voice') ? options.voice : selectedVoice(job.kind);
     if (voice) utterance.voice = voice;
-    utterance.onstart = () => {
+    const markStarted = () => {
+      if (started || settled) return;
       started = true;
       clearTimeout(timer);
-      timer = setTimeout(cancel, Math.min(180000, Math.max(15000, text.length / 8 * 1000 + 5000)));
+      timer = setTimeout(timedOut, Math.min(180000, Math.max(15000, text.length / 8 * 1000 + 5000)));
     };
+    utterance.onstart = markStarted;
     utterance.onend = () => finish(!options.requireStart || started);
-    utterance.onerror = cancel;
+    utterance.onerror = event => { lastSpeechIssue = event?.error || 'synthesis-failed'; cancel(); };
     // Algumas implementações deixam de emitir onend. O estado do sintetizador é a reserva.
-    poll = setInterval(() => { if (started && !synth.speaking && !synth.pending) finish(true); }, 500);
-    timer = setTimeout(cancel, options.startTimeout || 3000);
+    poll = setInterval(() => {
+      if (!started && synth.speaking) markStarted();
+      if (started && !synth.speaking && !synth.pending) finish(true);
+    }, 500);
+    timer = setTimeout(timedOut, options.startTimeout || 3000);
     try {
       synth.cancel();
       synth.resume();
@@ -680,19 +688,19 @@ async function trafficBulletin() {
   job.cleanups.add(removePreparationListener);
   const unavailable = () => {
     if (announcement === job && !job.cancelled) {
-      trafficVoiceError = 'Não foi possível ler o boletim neste dispositivo. As informações continuam no painel de trânsito. Toque em OUVIR BOLETIM para tentar novamente.';
+      trafficVoiceError = speechFailureMessage();
       report();
     }
   };
   try {
-    // Confirma a voz sem interromper a música e sem anunciar uma vinheta vazia.
+    // Inicia uma abertura falada antes da vinheta; evita depender de uma fala silenciosa.
     const voices = portugueseVoices();
     const preferred = voices.find(voice => voice.localService) || voices[0] || null;
     const candidates = preferred ? [preferred, null] : [null];
     let voice = null, ready = false;
     for (const candidate of candidates) {
       if (announcement !== job || job.cancelled) return;
-      if (await speakText('Boletim de trânsito.', job, { voice: candidate, volume: 0, requireStart: true, startTimeout: 7000 })) {
+      if (await speakText('Boletim de trânsito.', job, { voice: candidate,  startTimeout: 7000 })) {
         voice = candidate; ready = true; break;
       }
     }
@@ -711,7 +719,7 @@ async function trafficBulletin() {
     }
     if (chunk) chunks.push(chunk);
     for (const phrase of chunks) {
-      if (!await speakText(phrase, job, { voice, requireStart: true, startTimeout: 7000 })) { unavailable(); return; }
+      if (!await speakText(phrase, job, { voice,  startTimeout: 7000 })) { unavailable(); return; }
     }
     if (chunks.length) {
       trafficVoiceError = '';
@@ -743,8 +751,14 @@ function timeText(parts) {
   return `Rádio Trânsito SP. Agora, ${hour} ${hour === 1 ? 'hora' : 'horas'}` +
     (minute ? ` e ${minute} ${minute === 1 ? 'minuto' : 'minutos'}` : '') + '.';
 }
-async function checkTimeAnnouncement() {
-  if (!wanted || current.paused || pendingPlay || current.readyState < 2 || announcement) return;
+async function checkTimeAnnouncement(fromGesture = false) {
+  if (fromGesture && !canSpeak()) {
+    const message = 'Este navegador não disponibilizou a voz dos avisos. Abra a rádio no Chrome do celular para testar a leitura.';
+    if ($('weather-status')) $('weather-status').textContent = message;
+    status(message);
+    return;
+  }
+  if (!wanted || announcement || (!fromGesture && (current.paused || pendingPlay || current.readyState < 2))) return;
   const parts = radioTime();
   const slot = `${parts.year}-${parts.month}-${parts.day}-${parts.hour}-${Math.floor(Number(parts.minute) / 10)}`;
   if (slot === lastTimeSlot || Date.now() < nextTimeAttempt) return;
@@ -752,14 +766,17 @@ async function checkTimeAnnouncement() {
   if (!job) return;
   let said = false;
   try {
-    const prepared = await prepareAnnouncementVoice(job);
+    const prepared = prepareAnnouncementVoice(job);
     if (!prepared || announcement !== job || job.cancelled) return;
-    current.pause();
-    said = await speakText(timeText(radioTime()), job, { voice: prepared.voice, requireStart: true, startTimeout: 7000 });
+    said = await speakText(timeText(radioTime()), job, { voice: prepared.voice,  startTimeout: 7000 });
     if (said) lastTimeSlot = slot;
   } finally {
     nextTimeAttempt = Date.now() + (said ? 0 : 60000);
     finishAnnouncement(job);
+    if (!said && !job.cancelled && wanted) {
+      status(speechFailureMessage());
+      if ($('weather-status')) $('weather-status').textContent = speechFailureMessage();
+    }
   }
 }
 function tick() {
@@ -824,6 +841,7 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
     window.RadioWeather.create({
       isListening: () => wanted,
       unlockVoice: unlockAuxiliaryAudio,
+      voiceFailure: speechFailureMessage,
       canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
       announce: async (text, snapshot, stillValid = () => true) => {
         if (!stillValid() || announcement || pendingPlay) return false;
@@ -836,7 +854,7 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
           // Frases curtas mantêm os limites de espera da voz pequenos.
           const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
           for (const phrase of phrases) {
-            if (!await speakText(phrase.trim(), job, { voice: prepared.voice, requireStart: true, startTimeout: 7000 })) return false;
+            if (!await speakText(phrase.trim(), job, { voice: prepared.voice,  startTimeout: 7000 })) return false;
           }
           if (stillValid()) await playSting(STINGS.identity, job);
           return true;
@@ -864,7 +882,7 @@ if (window.RadioNews && typeof window.RadioNews.create === 'function') {
           const prepared = await prepareAnnouncementVoice(job);
           if (!prepared || !stillValid() || announcement !== job || job.cancelled) return false;
           current.pause();
-          for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job, { voice: prepared.voice, requireStart: true, startTimeout: 7000 })) return false;
+          for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job, { voice: prepared.voice,  startTimeout: 7000 })) return false;
           if (stillValid()) await playSting(STINGS.identity, job);
           return true;
         } finally { finishAnnouncement(job); }
