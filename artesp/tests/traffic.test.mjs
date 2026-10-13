@@ -47,6 +47,26 @@ test('timestamp da fonte ausente, velho, futuro ou sem fuso não é aceito', () 
     const raw=fixture();raw.meta.timestamp=value;assert.throws(()=>bulletin(raw,settings(env),NOW),/INVALID_TIMESTAMP/);
   }
 });
+test('formato real sem fuso é aceito somente quando coerente com Date da ARTESP em São Paulo', () => {
+  const now=Date.parse('2026-10-13T17:11:49Z'),raw=fixture(now);
+  raw.meta.timestamp='2026-10-13T14:11:48.250639';
+  const data=bulletin(raw,settings(env),now,'Tue, 13 Oct 2026 17:11:48 GMT');
+  assert.equal(data.updated_at,'2026-10-13T17:11:48.000Z');assert.equal(data.timestamp_kind,'resposta_oficial_http');
+  assert.equal(data.data_timestamp_verified,true);assert.ok(data.items[0].includes('14 horas e 11 minutos'));
+  for(const change of [r=>r.meta.timestamp='2026-10-13T14:00:00',r=>r.meta.timestamp='2026-10-13T17:11:48',r=>r.meta.timestamp=null]) {
+    const invalid=structuredClone(raw);change(invalid);assert.throws(()=>bulletin(invalid,settings(env),now,'Tue, 13 Oct 2026 17:11:48 GMT'),/INVALID_TIMESTAMP/);
+  }
+  for(const date of [null,'valor privado','Tue, 13 Oct 2026 16:11:48 GMT']) assert.throws(()=>bulletin(raw,settings(env),now,date),/INVALID_TIMESTAMP/);
+});
+test('relógio sem fuso coerente com uma resposta antiga continua sendo rejeitado',()=>{
+  const raw=fixture();raw.meta.timestamp='2026-10-13T11:00:00';
+  assert.throws(()=>bulletin(raw,settings(env),NOW,'Tue, 13 Oct 2026 14:00:00 GMT'),/INVALID_TIMESTAMP/);
+});
+test('consulta de madrugada cruza a data UTC sem mudar o dia local do boletim',()=>{
+  const now=Date.parse('2026-10-14T01:30:01Z'),raw=fixture(now);raw.meta.timestamp='2026-10-13T22:30:00.123456';
+  const data=bulletin(raw,settings(env),now,'Wed, 14 Oct 2026 01:30:00 GMT');
+  assert.equal(data.updated_at,'2026-10-14T01:30:00.000Z');assert.ok(data.items[0].includes('22 horas e 30 minutos'));
+});
 test('paginação parcial é declarada e eventos mais recentes têm prioridade', () => {
   const raw=fixture();raw.meta.count=120;raw.results.push({...structuredClone(raw.results[0]),slug:'oc-novo',tipo_ac:'Tombamento',atualizado_em:new Date(NOW).toISOString()});
   const data=bulletin(raw,settings(env),NOW);assert.equal(data.complete,false);assert.ok(data.items[1].includes('Tombamento'));assert.ok(data.notice.includes('parcial'));

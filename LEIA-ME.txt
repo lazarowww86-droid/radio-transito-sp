@@ -1,45 +1,35 @@
-RÁDIO TRÂNSITO SP — PROGRAMAÇÃO DIÁRIA E NOMES DAS MÚSICAS
-Versão: 20261013-r5-daily
+RÁDIO TRÂNSITO SP — ATUALIZAÇÃO 12 / ARTESP
 
-PARA ATUALIZAR
-1. Baixe 10-ATUALIZACAO-PROGRAMACAO-DIARIA.zip e extraia o arquivo no computador.
-2. No GitHub, abra a RAIZ do repositório radio-transito-sp, onde já estão index.html e app.js.
-3. Use Add file > Upload files e envie TODOS os arquivos extraídos do pacote 10, mantendo-os nessa raiz. Confirme o commit.
-4. Aguarde a publicação do GitHub Pages. Abra a rádio e pressione Ctrl + F5.
+COMO PUBLICAR
+1. Extraia 12-ATUALIZACAO-ARTESP.zip no computador.
+2. Abra a página inicial do repositório radio-transito-sp no GitHub.
+3. Em Add file > Upload files, arraste TODOS os arquivos e a pasta artesp que estão dentro do ZIP extraído.
+4. Confirme Commit changes e aguarde a conclusão das publicações do GitHub Pages e Cloudflare.
+5. Abra a rádio e recarregue a página. A fonte pública já estará configurada.
 
-O pacote 10 não contém áudios: aproveita as 20 músicas, os podcasts e as vinhetas que já estão publicados.
-Envie o conteúdo extraído, não o ZIP. Não envie esses arquivos para dentro da pasta media.
-Não é necessário reenviar as partes 06, 07 e 08.
-RADIO-TRANSITO-SP-LEVE.zip é o backup completo para guardar; não é o pacote pequeno de atualização.
+O QUE MUDA
+- O serviço interpreta o horário sem fuso observado na resposta real da ARTESP, conferindo-o com o campo Date HTTP da própria resposta oficial, convertido para São Paulo.
+- Horários incoerentes, antigos, futuros ou sem confirmação continuam sendo rejeitados.
+- O site usa por padrão https://radio-transito-sp.lazarowww86.workers.dev/boletins para todos os ouvintes.
+- Endereços alternativos salvos no próprio navegador continuam disponíveis. Limpar o campo de configuração restaura a fonte oficial.
+- O painel identifica o horário da resposta/consulta oficial e apresenta os créditos e a licença da fonte.
 
-MÚSICAS
-Os títulos e os artistas das 20 músicas estão em music-tracks.js.
-A reprodução é aleatória: passa por todas as 20 antes de embaralhar novamente e evita repetir a última faixa na virada da seleção.
-O botão Anterior usa o histórico. Os nomes dos MP3s não mudaram, então os links já publicados continuam válidos.
+PROGRAMAÇÃO
+- 20 músicas embaralhadas, sem repetição até completar cada seleção.
+- Um podcast por dia, repetido às 06:30, 12:00 e 18:30, no horário de São Paulo.
+- Previsão para São Paulo e Guarulhos a cada 30 minutos durante a escuta.
+- Trânsito a cada 15 minutos durante a escuta. A mídia retoma do mesmo ponto após os boletins.
+- Os 28 MP3s e os módulos de programação, músicas e previsão mantêm os mesmos bytes da versão anterior. O cache dos áudios usa a mesma versão.
 
-PODCASTS
-Um episódio diferente por dia, em rodízio dos quatro programas existentes.
-O mesmo episódio do dia entra às 06:30, 12:00 e 18:30, no horário de São Paulo/Brasília.
-Fora desses horários e após o episódio, a programação é musical.
-Se o ouvinte entrar durante a transmissão, o podcast começa no ponto correspondente ao horário, como em uma rádio.
-A página pausada não inicia áudio sozinha. Play retoma a escuta e entra no episódio do horário, quando houver um.
-Ao usar Próximo durante o podcast, aquela entrada é pulada e a música continua.
-Um podcast pausado ou interrompido por um boletim é retomado no mesmo ponto; não é cortado quando passa sua duração nominal no relógio.
-A grade depende da data e hora do dispositivo. Ela segue funcionando enquanto a página/app permanecer aberta; não inicia áudio com a página fechada.
+CHAVE E SERVIÇO
+- O serviço existente é radio-transito-sp. O segredo ARTESP_API_KEY continua cadastrado no Cloudflare.
+- Este pacote só contém o endereço público do serviço e códigos de exemplo fictícios para testes.
+- A revisão do serviço será 20261013-artesp-r4.
+- O cache e a proteção de cota continuam compartilhados entre os ouvintes.
 
-VOZ DO TEMPO
-No painel do tempo há uma escolha de voz. O modo automático prioriza uma voz masculina em português brasileiro e dá preferência às vozes chamadas Natural/Neural, quando o navegador as oferece.
-As vozes dependem do aparelho e do navegador. Não foi incluída uma voz gravada independente: a geração dessa voz foi bloqueada automaticamente nesta rodada.
-Sem uma voz alternativa instalada, o navegador pode continuar oferecendo apenas a voz anterior. A previsão e a reprodução da rádio continuam disponíveis.
-
-PRESERVADO
-Os 28 MP3s são idênticos ao backup anterior: músicas compactadas, quatro podcasts e quatro vinhetas.
-Play, pausa, Anterior/Próximo, pré-carregamento, hora certa, boletins de trânsito, previsão de São Paulo/Guarulhos e funcionamento offline foram mantidos e verificados.
-Nenhuma alteração foi publicada automaticamente no seu GitHub.
-
-TESTES NO BACKUP
-node tests/player.test.cjs
-node tests/music.test.cjs
-node tests/programming.test.cjs
-node tests/weather.test.cjs
-node tests/service-worker.test.cjs
+VALIDAÇÃO
+- 32 testes do serviço, incluindo o horário real sem fuso, coerência com Date HTTP e virada de data.
+- 53 verificações do site: player, programação, previsão, trânsito, identificação das músicas e cache offline.
+- Comparação com o motor workerd/Miniflare usando respostas fictícias no formato observado da ARTESP.
+- Chromium 150: MP3 real, 40 transições entre músicas, controles, horários dos podcasts, boletins e funcionamento offline. Respostas das fontes e a voz foram simuladas nesse teste.
+- A publicação desta revisão ainda deve ser confirmada com uma consulta real ao serviço depois do upload.

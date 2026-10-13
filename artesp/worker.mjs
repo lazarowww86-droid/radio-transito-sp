@@ -19,7 +19,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Vary': 'Origin' } });
     if (request.method !== 'GET') return reply({ error: 'Método não permitido.' }, 405, origin);
     const url = new URL(request.url);
-    if (url.pathname === '/') return reply({ service: 'Rádio Trânsito SP — ARTESP', revision: '20261013-artesp-r3', route: '/boletins', configured: Boolean(env.ARTESP_API_KEY && env.ARTESP_CACHE), interval_minutes: 15 }, 200, origin);
+    if (url.pathname === '/') return reply({ service: 'Rádio Trânsito SP — ARTESP', revision: '20261013-artesp-r4', route: '/boletins', configured: Boolean(env.ARTESP_API_KEY && env.ARTESP_CACHE), interval_minutes: 15 }, 200, origin);
     if (url.pathname !== '/boletins') return reply({ error: 'Rota não encontrada.' }, 404, origin);
     if (url.search) return reply({ error: 'Os filtros são definidos no servidor. Use apenas /boletins.' }, 400, origin);
     if (!env.ARTESP_CACHE) return reply({ error: 'Configure o vínculo ARTESP_CACHE.', items: [], updated_at: null }, 503, origin);

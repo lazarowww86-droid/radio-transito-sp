@@ -6,13 +6,27 @@ export const INTERVAL = 15 * 60000;
 export const MIN_INTERVAL = 5 * 60000 + 1000;
 export const HOUR = 3600000;
 export const MAX_CALLS = 12;
-const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
 const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
 const text = (value, max = 90) => typeof value === 'string' ? value.replace(/<[^>]*>/g, ' ').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '';
 const stamp = value => typeof value === 'string' && /(Z|[+-]\d{2}:\d{2})$/.test(value) ? Date.parse(value) : NaN;
 const km = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value < 10000;
 const parts = time => Object.fromEntries(formatter.formatToParts(new Date(time)).map(p => [p.type, p.value]));
 const dateKey = time => { const p = parts(time); return `${p.year}-${p.month}-${p.day}`; };
+const httpTimestamp = value => typeof value === 'string' && /^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(value) ? Date.parse(value) : NaN;
+
+function consultationTime(value, responseDate) {
+  const explicit = stamp(value);
+  if (Number.isFinite(explicit)) return { at: explicit, kind: 'consulta_oficial_api', source: 'meta.timestamp' };
+  // A resposta real tem um relógio local sem fuso. Só aceitamos quando esse
+  // relógio coincide com Date HTTP, convertido para São Paulo, em até um minuto.
+  const http = httpTimestamp(responseDate);
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?$/.test(value) || !Number.isFinite(http)) throw new Error('INVALID_TIMESTAMP');
+  const local = Date.parse(value + 'Z'), p = parts(http);
+  const expectedLocal = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}Z`);
+  if (!Number.isFinite(local) || Math.abs(local - expectedLocal) > 60000) throw new Error('INVALID_TIMESTAMP');
+  return { at: http, kind: 'resposta_oficial_http', source: 'HTTP Date confirmado com o relógio local da API' };
+}
 
 export function settings(env = {}) {
   const municipalities = String(env.ARTESP_MUNICIPIOS ?? '3550308,3518800').trim();
@@ -31,8 +45,8 @@ export function apiURL(config, now = Date.now()) {
   return url.href;
 }
 
-export function bulletin(payload, config, now = Date.now()) {
-  const at = stamp(payload?.meta?.timestamp);
+export function bulletin(payload, config, now = Date.now(), responseDate) {
+  const clock = consultationTime(payload?.meta?.timestamp, responseDate), at = clock.at;
   if (!Number.isFinite(at) || now - at > 10 * 60000 || at - now > 60000) throw new Error('INVALID_TIMESTAMP');
   if (!Array.isArray(payload.results) || payload.results.length > 100 || !Number.isInteger(payload.meta.count) || payload.meta.count < payload.results.length || payload.meta.offset !== 0) throw new Error('INVALID_PAYLOAD');
   if (payload.meta.count > 0 && !payload.results.length) throw new Error('INVALID_PAYLOAD');
@@ -68,7 +82,7 @@ export function bulletin(payload, config, now = Date.now()) {
   const intro = `Rádio Trânsito SP. Segundo a ARTESP, na consulta das ${+p.hour} horas e ${+p.minute} minutos, estes registros constavam como ativos nas rodovias monitoradas em ${config.region}.`;
   const items = records.length ? [intro, ...records.slice(0, 5).map(r => r.description)] : [`Segundo a ARTESP, a consulta das ${+p.hour} horas e ${+p.minute} minutos não retornou registros ativos no recorte de ${config.region}, conhecidos nos últimos sete dias.`];
   return { source: 'ARTESP — Centro de Controle Multimodal; Ocorrências Rodoviárias', source_url: SOURCE_URL, license: 'CC BY-NC 4.0', license_url: LICENSE_URL,
-    updated_at: new Date(at).toISOString(), retrieved_at: new Date(now).toISOString(), timestamp_kind: 'consulta_oficial_api', data_timestamp_verified: true,
+    updated_at: new Date(at).toISOString(), retrieved_at: new Date(now).toISOString(), timestamp_kind: clock.kind, timestamp_source: clock.source, data_timestamp_verified: true,
     region: config.region, period: 'Registros conhecidos nos últimos sete dias', complete, total_in_query: payload.meta.count, returned_records: records.length,
     notice: complete ? 'Seleção de até cinco registros; horário da consulta oficial, não da medição de velocidade.' : 'Seleção parcial de registros; horário da consulta oficial, não da medição de velocidade.', items };
 }
@@ -93,7 +107,7 @@ function failureDetail(error, phase, response, payload) {
   const safeStamp = typeof timestamp === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})?$/.test(timestamp) ? timestamp : null;
   const contentType = response?.headers?.get('Content-Type')?.split(';')[0]?.trim()?.toLowerCase();
   const httpDate = response?.headers?.get('Date');
-  const safeHttpDate = typeof httpDate === 'string' && /^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(httpDate) && Number.isFinite(Date.parse(httpDate)) ? new Date(httpDate).toISOString() : null;
+  const safeHttpDate = Number.isFinite(httpTimestamp(httpDate)) ? new Date(httpTimestamp(httpDate)).toISOString() : null;
   const rows = Array.isArray(payload?.results) ? payload.results.slice(0, 100) : [];
   return { code, phase, upstream_status: response?.status || null, upstream_content_type: ['application/json','text/html','text/plain'].includes(contentType) ? contentType : 'other', upstream_http_date: safeHttpDate,
     schema: { meta_type: type(payload?.meta), results_type: type(payload?.results), count_type: type(payload?.meta?.count), count: numeric(payload?.meta?.count),
@@ -146,7 +160,7 @@ export class TrafficGateway {
       phase = 'decode';
       try { payload = JSON.parse(raw); } catch (_) { throw new Error('INVALID_JSON'); }
       phase = 'validate';
-      state.snapshot = bulletin(payload, config, this.now());
+      state.snapshot = bulletin(payload, config, this.now(), response.headers.get('Date'));
       state.nextAt = this.now() + INTERVAL;
       if (response.headers.get('X-RateLimit-Remaining') === '0') state.nextAt = Math.max(state.nextAt, this.now() + retryDelay(response.headers.get('Retry-After'), this.now()));
     } catch (error) {
