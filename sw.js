@@ -1,4 +1,4 @@
-const BUILD = '20261013-r16-voz-celular';
+const BUILD = '20261013-r17-restaurar-voz';
 const MEDIA_BUILD = '20261013-r2-light';
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);

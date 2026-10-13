@@ -1,22 +1,5 @@
-RÁDIO TRÂNSITO SP — COMPATIBILIDADE DA VOZ NO CELULAR
-
-Extraia 22-CORRIGIR-VOZ-CELULAR.zip.
-Envie app.js, weather.js, index.html e sw.js na raiz do repositório radio-transito-sp, em Add file > Upload files.
-Clique Commit changes e aguarde a publicação.
-Não precisa reenviar áudios ou mudar a configuração da Cloudflare.
-
-No Samsung, após publicar, abra no navegador:
-https://lazarowww86-droid.github.io/radio-transito-sp/?v=22
-Recarregue essa página uma vez e toque em OUVIR AO VIVO.
-
-Mudanças:
-- Remove a etapa silenciosa que fazia a leitura depender de eventos que alguns motores móveis não enviam.
-- Envia a hora diretamente durante o toque no Play, respeitando a interação do usuário com o navegador.
-- A leitura também acompanha o estado de fala quando o evento onstart não é emitido.
-- Exibe mensagem compreensível quando o serviço de voz do navegador recusa ou falha.
-- Inclui as correções anteriores de previsão inicial, hora, trânsito e retomada.
-
-Preserva as músicas, os cinco podcasts, as vinhetas, os horários e as fontes.
-
-Validação realizada: testes de programação/player; testes de motor sem eventos de início e que rejeita falas silenciosas; navegador Chromium real, sem simular a voz ou desativar a política de autoplay.
-O navegador real deste ambiente não tem vozes instaladas: verificou-se o envio da fala em um clique real, sem pedidos silenciosos, e a exibição da falha nativa. Isso NÃO comprova a reprodução audível no Samsung. A confirmação do som depende do teste no aparelho.
+Restaura o código de voz anterior às versões 20, 21 e 22.
+Enviar app.js, weather.js, index.html e sw.js à raiz do repositório.
+Mantém músicas, podcasts, notícias, vinhetas e nomes das rodovias.
+Restaura também os horários anteriores: hora a cada dez minutos, previsão a cada trinta minutos. Não promete previsão um minuto após Play.
+Não foi possível confirmar o som em um Samsung físico.

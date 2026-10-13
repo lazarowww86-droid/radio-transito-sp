@@ -168,7 +168,7 @@ function create(hooks) {
       const said = await hooks.announce(text(snapshot), snapshot, () => revision === interaction && (!wasListening || hooks.isListening()) && fresh(snapshot));
       if (revision !== interaction) return;
       nextAt = Date.now() + (said ? INTERVAL : RETRY);
-      if (!said) message(hooks.voiceFailure?.() || 'A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
+      if (!said) message('A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
     } catch (_) {
       if (revision === interaction) message('Não foi possível ler o boletim. Consulte a previsão no painel.');
       if (!manual) nextAt = Date.now() + RETRY;
@@ -177,7 +177,7 @@ function create(hooks) {
   function schedule() {
     if (!inFlight) paint();
     if (!hooks.isListening()) return;
-    if (nextAt === null) nextAt = Date.now() + 60000;
+    if (nextAt === null) nextAt = Date.now() + INTERVAL;
     if (Date.now() >= nextAt && !bulletinRunning && hooks.canAnnounce(false)) bulletin(false);
   }
   function cancelPending() { interaction++; }
