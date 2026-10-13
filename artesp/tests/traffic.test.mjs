@@ -55,7 +55,13 @@ test('100 ouvintes simultâneos fazem só uma chamada à ARTESP', async () => {
   const a=gateway();const replies=await Promise.all(Array.from({length:100},()=>a.instance.get()));
   assert.equal(a.runtime.calls.length,1);assert.ok(replies.every(r=>r.status===200));
   assert.equal(a.runtime.calls[0].options.headers.Authorization,'Api-Key '+env.ARTESP_API_KEY);
-  assert.equal(a.runtime.calls[0].options.redirect,'error');
+  assert.equal(a.runtime.calls[0].options.redirect,'manual');
+});
+test('redirecionamento da API não repassa a chave a outro destino', async () => {
+  const a=gateway({runtime:{async fetch(url,options){this.calls.push({url,options});return new Response('destino privado', {status:302,headers:{Location:'https://outro.test/'}});}}});
+  const result=await a.instance.get();assert.equal(result.status,503);assert.equal(a.runtime.calls.length,1);
+  assert.equal(a.runtime.calls[0].options.redirect,'manual');assert.deepEqual(result.body.items,[]);
+  assert.ok(!JSON.stringify(result).includes('destino privado'));assert.ok(!JSON.stringify(result).includes(env.ARTESP_API_KEY));
 });
 test('cache dura 15 minutos e sobreviver ao reinício não renova o horário dos dados', async () => {
   const a=gateway();const first=await a.instance.get();a.runtime.at+=INTERVAL-1;await a.instance.get();assert.equal(a.runtime.calls.length,1);

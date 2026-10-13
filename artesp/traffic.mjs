@@ -84,7 +84,8 @@ export class TrafficGateway {
   constructor(storage, env, runtime = {}) {
     this.storage = storage; this.env = env;
     this.now = runtime.now || Date.now;
-    this.fetch = runtime.fetch || globalThis.fetch;
+    // O runtime do Cloudflare exige que fetch mantenha o receptor global.
+    this.fetch = runtime.fetch || globalThis.fetch.bind(globalThis);
     this.queue = Promise.resolve();
     this.ready = storage.get('gateway').then(value => { this.state = value || { attempts: [], nextAt: 0, snapshot: null, failure: null, config: '' }; });
   }
@@ -109,7 +110,7 @@ export class TrafficGateway {
     await this.storage.put('gateway', state);
     let response;
     try {
-      response = await this.fetch(apiURL(config, now), { headers: { Authorization: 'Api-Key ' + key, Accept: 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(8000), cache: 'no-store' });
+      response = await this.fetch(apiURL(config, now), { headers: { Authorization: 'Api-Key ' + key, Accept: 'application/json' }, redirect: 'manual', signal: AbortSignal.timeout(8000), cache: 'no-store' });
       if (!response.ok) throw new Error('UPSTREAM_' + response.status);
       const length = response.headers.get('Content-Length');
       if (length && Number(length) > 2 * 1024 * 1024) throw new Error('RESPONSE_TOO_LARGE');

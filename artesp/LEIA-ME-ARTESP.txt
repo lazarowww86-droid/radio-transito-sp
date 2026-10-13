@@ -1,6 +1,23 @@
 RÁDIO TRÂNSITO SP — INTEGRAÇÃO ARTESP
 Produto aprovado: Ocorrências Rodoviárias
 
+ATUALIZAÇÃO DE 13/10/2026 — SERVIÇO JÁ PUBLICADO
+1. Extraia esta versão atualizada do pacote 11-INTEGRACAO-ARTESP.zip.
+2. No GitHub, abra a raiz do repositório radio-transito-sp.
+3. Em Add file > Upload files, arraste a pasta artesp inteira e confirme o commit.
+4. O Cloudflare já conectado ao GitHub publicará a atualização automaticamente.
+5. O serviço radio-transito-sp continua usando o segredo ARTESP_API_KEY já cadastrado.
+6. Após o build concluir, será feita nova verificação em:
+   https://radio-transito-sp.lazarowww86.workers.dev/boletins
+
+CORREÇÃO DESTA VERSÃO
+- A chamada fetch mantém o contexto global exigido pelo runtime do Cloudflare.
+- O modo de redirecionamento é manual; a credencial não segue para outro endereço.
+- O nome no arquivo wrangler.jsonc corresponde ao serviço publicado: radio-transito-sp.
+- O pacote contém somente a pasta artesp. Música, podcasts, previsão e player permanecem nos arquivos atuais do site.
+
+As etapas seguintes documentam a instalação completa para referência.
+
 ETAPA 1 — ENVIAR A PASTA
 1. Extraia 11-INTEGRACAO-ARTESP.zip no computador.
 2. No GitHub, abra a raiz do repositório radio-transito-sp.
@@ -13,9 +30,9 @@ ETAPA 2 — CRIAR O SERVIÇO NO CLOUDFLARE
 2. Selecione Create application > Import a repository e conecte sua conta GitHub.
 3. Escolha o repositório radio-transito-sp.
 4. Configure os campos:
-   Nome do Worker: radio-transito-sp-artesp
+   Nome do Worker: radio-transito-sp
    Branch: main
-   Root directory / Diretório raiz: artesp
+   Path / Root directory / Diretório raiz: artesp
    Build command / Comando de compilação: npm run validate
    Deploy command / Comando de publicação: npm run deploy
 5. Clique Save and Deploy e aguarde a publicação.
@@ -25,12 +42,12 @@ ETAPA 2 — CRIAR O SERVIÇO NO CLOUDFLARE
 ETAPA 3 — GUARDAR A CHAVE
 1. No portal https://ccm.artesp.sp.gov.br/, abra Minha Conta > Minhas APIs > Ocorrências Rodoviárias.
 2. Abra a seção de Ocorrências e revele/copie sua chave ativa. O portal pode limitar a exibição desse valor.
-3. No Cloudflare, abra o Worker radio-transito-sp-artesp > Settings > Variables and Secrets > Add.
-4. Selecione o tipo Secret.
-   Variable name / Nome: ARTESP_API_KEY
+3. No Cloudflare, abra o Worker radio-transito-sp > Settings > Runtime variables > Add variable.
+4. Marque Production e a opção Secret.
+   Key / Nome: ARTESP_API_KEY
    Value / Valor: cole somente a chave copiada do portal.
    O código já acrescenta o prefixo Api-Key. Esse prefixo não deve fazer parte do valor salvo.
-5. Clique Deploy para aplicar.
+5. Clique Add variable and deploy para aplicar.
    A chave fica no segredo do seu Worker. Ela não faz parte dos arquivos enviados ao GitHub.
 
 ETAPA 4 — TESTAR E CONECTAR À RÁDIO
@@ -67,10 +84,11 @@ Licença dos dados: CC BY-NC 4.0 — https://creativecommons.org/licenses/by-nc/
 Os dados fornecidos pela API são resumidos em texto para os boletins; a resposta do serviço inclui fonte, link, licença e indicação do recorte.
 
 VALIDAÇÃO DESTA ENTREGA
-- 26 testes do adaptador e das rotas, com respostas e armazenamento simulados.
+- 27 testes do adaptador e das rotas, com respostas e armazenamento simulados.
+- Comparação no motor workerd/Miniflare: a versão anterior retorna HTTP 503 antes de consultar a fonte; a corrigida retorna HTTP 200 e mantém uma só consulta ao atender outros 20 ouvintes. A resposta da ARTESP nesse teste é fictícia.
 - 1 teste de compatibilidade com a rádio atual: o boletim pausa e retoma o MP3 no mesmo ponto; erro da fonte não interrompe a reprodução.
 - Empacotamento validado com Wrangler 4.150.0 em modo dry-run.
-- A chave real não foi recebida nem testada. O serviço ainda precisa ser publicado no seu Cloudflare e validado com a ARTESP.
+- A chave real não foi recebida. O serviço e o segredo já estão no Cloudflare do usuário. A consulta real com esta correção será validada após a atualização automática.
 
 ALTERNATIVA PARA QUEM JÁ USA O TERMINAL
 Na pasta artesp, com Node.js instalado:
