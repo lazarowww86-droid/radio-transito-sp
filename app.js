@@ -328,7 +328,7 @@ function beginAnnouncement(kind) {
   pendingPlay = false;
   current.pause();
   controls();
-  status(kind === 'time' ? 'NO AR • hora certa' : kind === 'weather' ? 'NO AR • previsão do tempo' : 'NO AR • boletim de trânsito');
+  status(kind === 'time' ? 'NO AR • hora certa' : kind === 'weather' ? 'NO AR • previsão do tempo' : kind === 'news' ? 'NO AR • notícias' : 'NO AR • boletim de trânsito');
   return job;
 }
 
@@ -750,6 +750,26 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
   } catch (_) {
     if ($('weather-status'))$('weather-status').textContent = 'Previsão temporariamente indisponível.';
   }
+}
+
+// As notícias compartilham a retomada de áudio já usada pelos demais boletins.
+if (window.RadioNews && typeof window.RadioNews.create === 'function') {
+  try {
+    window.RadioNews.create({
+      isListening: () => wanted,
+      unlockVoice: unlockAuxiliaryAudio,
+      canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
+      announce: async (phrases, stillValid = () => true) => {
+        if (!stillValid() || announcement || pendingPlay) return false;
+        const job = beginAnnouncement('news');
+        if (!job) { if ($('news-status')) $('news-status').textContent = 'A leitura de notícias não está disponível neste dispositivo.'; return false; }
+        try {
+          for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
+          return true;
+        } finally { finishAnnouncement(job); }
+      }
+    });
+  } catch (_) { if ($('news-status')) $('news-status').textContent = 'Notícias temporariamente indisponíveis.'; }
 }
 
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

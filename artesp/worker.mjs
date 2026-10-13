@@ -1,9 +1,13 @@
 import { DurableObject } from 'cloudflare:workers';
 import { TrafficGateway } from './traffic.mjs';
+import { NewsGateway } from './news.mjs';
 
 export class ArtespStore extends DurableObject {
-  constructor(ctx, env) { super(ctx, env); this.gateway = new TrafficGateway(ctx.storage, env); }
+  constructor(ctx, env) { super(ctx, env); this.gateway = new TrafficGateway(ctx.storage, env); this.newsGateway = new NewsGateway(ctx.storage); }
   async snapshot() { return this.gateway.get(); }
+  async newsSnapshot() {
+    return this.newsGateway.get();
+  }
 }
 const reply = (body, status, origin, retry) => {
   const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': origin,
@@ -19,6 +23,14 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Vary': 'Origin' } });
     if (request.method !== 'GET') return reply({ error: 'Método não permitido.' }, 405, origin);
     const url = new URL(request.url);
+    if (url.pathname === '/noticias') {
+      if (url.search) return reply({ error: 'Use apenas /noticias.' }, 400, origin);
+      if (!env.ARTESP_CACHE) return reply({ error: 'Serviço de notícias indisponível.', items: [] }, 503, origin);
+      try {
+        const result = await env.ARTESP_CACHE.getByName('radio-occurrences-v1').newsSnapshot();
+        return reply(result.body, result.status, origin);
+      } catch (_) { return reply({ error: 'Notícias temporariamente indisponíveis.', items: [], updated_at: null }, 503, origin); }
+    }
     if (url.pathname === '/') return reply({ service: 'Rádio Trânsito SP — ARTESP', revision: '20261013-artesp-r4', route: '/boletins', configured: Boolean(env.ARTESP_API_KEY && env.ARTESP_CACHE), interval_minutes: 15 }, 200, origin);
     if (url.pathname !== '/boletins') return reply({ error: 'Rota não encontrada.' }, 404, origin);
     if (url.search) return reply({ error: 'Os filtros são definidos no servidor. Use apenas /boletins.' }, 400, origin);

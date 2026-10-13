@@ -1,2 +1,23 @@
-Extraia o ZIP. Envie somente index.html e sw.js na raiz do repositório radio-transito-sp, em Add file > Upload files. Clique Commit changes.
-Remove apenas o bloco Entre os programas com a quantidade e o funcionamento da seleção musical.
+RÁDIO TRÂNSITO SP — NOTÍCIAS
+
+1. Extraia 17-ADICIONAR-NOTICIAS.zip.
+2. Abra a página inicial do repositório radio-transito-sp no GitHub.
+3. Clique Add file > Upload files.
+4. Arraste os arquivos index.html, styles.css, app.js, news.js e sw.js, junto com a pasta artesp que está DENTRO do ZIP.
+5. Clique Commit changes.
+6. Aguarde a publicação do GitHub Pages e da Cloudflare, conectada ao mesmo repositório.
+7. Abra a rádio e atualize a página. No computador, use Ctrl + Shift + R.
+
+A pasta artesp contém apenas os dois arquivos alterados. Não apague nenhum arquivo ou pasta já existente. Não é necessário enviar músicas novamente, mudar a chave ARTESP ou adicionar configurações na Cloudflare.
+
+Fontes: G1, Metrópoles, Terra e Agência Brasil.
+A página consulta manchetes recentes a cada 30 minutos e oferece links para os portais.
+O botão OUVIR NOTÍCIAS lê até uma manchete por fonte e cita o portal.
+O boletim automático começa após 30 minutos de escuta, aguarda o aviso que estiver no ar e evita repetir os mesmos links.
+A voz depende das vozes disponíveis no aparelho, como nos demais boletins.
+Se uma fonte falhar, as outras continuam; se todas falharem, a programação segue sem notícias antigas ou inventadas.
+
+São manchetes recentes dos feeds públicos, não um resumo do texto completo nem uma reprodução de toda a reportagem.
+Player, podcasts, clima, consulta ARTESP, ícones e as 56 músicas foram preservados. A versão de app.js usada foi a publicada no momento desta atualização, incluindo as alterações que já estavam no site.
+
+Se a Cloudflare aparecer com erro após o envio, mantenha sua chave e vínculos atuais e envie uma foto dos registros da publicação. As músicas continuam disponíveis mesmo que o serviço de notícias ainda não tenha sido publicado.
