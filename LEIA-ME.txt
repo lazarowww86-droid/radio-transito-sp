@@ -1,39 +1,12 @@
-RÁDIO TRÂNSITO SP — ADICIONAR 16 MÚSICAS DE ROUPA NOVA
+ATUALIZAÇÃO: 20 novas músicas; seleção total de 56.
 
-COMO ENVIAR AO GITHUB
-1. Extraia 14-ADICIONAR-ROUPA-NOVA.zip no computador.
-2. Abra a página INICIAL do repositório: https://github.com/lazarowww86-droid/radio-transito-sp
-3. Clique em Add file > Upload files.
-4. Arraste TODOS os arquivos e a pasta media que estão DENTRO do ZIP extraído.
-   Envie na raiz do repositório, não de dentro da pasta media.
-   Não envie o ZIP nem a pasta externa criada pela extração.
-5. Clique em Commit changes e aguarde a publicação.
-6. No computador, abra a rádio e pressione Ctrl + F5. No celular, feche e abra a rádio novamente.
+1. Extraia 15-ADICIONAR-MUSICAS3.zip.
+2. No início do repositório radio-transito-sp, clique Add file > Upload files.
+3. Envie index.html, music-tracks.js, sw.js e a pasta media que estão DENTRO do ZIP.
+4. Clique Commit changes e aguarde a publicação.
 
-O QUE ESTA ATUALIZAÇÃO CONTÉM
-- As 16 novas músicas de Roupa Nova, compactadas em MP3 mono, 48 kbps, 22.050 Hz, no mesmo padrão usado anteriormente.
-- Nomes de músicas e artista na programação e nos próprios arquivos MP3.
-- Seleção com 36 músicas: as 20 anteriores e as 16 novas.
-- Reprodução aleatória, sem repetição até completar cada ciclo.
-- Todos os áudios anteriores permanecem com os mesmos nomes e bytes. O envio apenas adiciona os arquivos novos à pasta media.
-
-TAMANHOS
-Os áudios recebidos tinham 61,47 MB; as versões compactadas totalizam 23,09 MB.
-A maior música tem cerca de 1,75 MB. O limite de envio pelo navegador do GitHub é 25 MiB por arquivo; cada MP3 deste pacote fica abaixo desse limite.
-Fonte: https://docs.github.com/pt/repositories/working-with-files/managing-files/adding-a-file-to-a-repository
-
-VERIFICAÇÕES
-- Todas as 16 faixas foram decodificadas por inteiro. A quantidade de amostras de áudio foi preservada pela compactação, sem corte da música.
-- 54 verificações do site passaram.
-- Chromium reproduziu as 36 músicas em um ciclo completo, incluindo as 16 novas, sem repetição, usando os MP3s reais.
-- Play, pausa, retomada após boletim, horários dos podcasts e funcionamento offline conferidos.
-- Zero erros JavaScript no teste de navegador.
-
-MANTIDO
-- Quatro podcasts e seus horários: 06:30, 12:00 e 18:30, em São Paulo.
-- Previsão, hora certa, vinhetas e boletins ARTESP.
-- Ícone novo e página sem Salvar fonte.
-- O código do player, a programação, a previsão e o serviço ARTESP não foram alterados.
-
-Veja RELATORIO-ROUPA-NOVA.txt para os títulos e o método de identificação.
-O arquivo RADIO-TRANSITO-SP-LEVE.zip é o backup completo, não o pacote recomendado para este envio.
+Não envie o ZIP diretamente. Não apague a pasta media existente.
+As 36 músicas anteriores estão mantidas na lista. Se ainda não enviou o pacote 14 (Roupa Nova), envie-o primeiro.
+Áudios novos: MP3 48 kbps, mono, 22050 Hz, sem cortes; cada arquivo abaixo de 2 MB.
+Player, boletins, tempo, podcasts e ícones preservados.
+As músicas novas vieram sem títulos/artistas identificados; aparecem como CD 3 — Faixa 01 a 20.

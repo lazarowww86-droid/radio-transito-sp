@@ -1,4 +1,4 @@
-// Seleção musical: músicas anteriores preservadas e 16 faixas de Roupa Nova.
+// Seleção musical: 56 músicas, com as anteriores preservadas.
 window.RadioMusicTracks = [
   {
     "type": "music",
@@ -215,5 +215,125 @@ window.RadioMusicTracks = [
     "title": "Romântico Demais",
     "artist": "Roupa Nova",
     "src": "media/roupa-nova-16.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 01",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-01.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 02",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-02.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 03",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-03.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 04",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-04.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 05",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-05.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 06",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-06.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 07",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-07.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 08",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-08.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 09",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-09.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 10",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-10.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 11",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-11.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 12",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-12.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 13",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-13.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 14",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-14.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 15",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-15.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 16",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-16.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 17",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-17.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 18",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-18.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 19",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-19.mp3"
+  },
+  {
+    "type": "music",
+    "title": "CD 3 — Faixa 20",
+    "artist": "Artista não identificado",
+    "src": "media/musicas3-20.mp3"
   }
 ];
