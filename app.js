@@ -46,8 +46,7 @@ function fmt(t) {
 function progress() {
   const duration = current.duration, time = current.currentTime || 0;
   $('elapsed').textContent = fmt(time);
-  $('duration').textContent = fmt(duration);
-  $('progress').style.width = (Number.isFinite(duration) && duration > 0 ? Math.min(100, time / duration * 100) : 0) + '%';
+  $('duration').textContent = fmt(duration);$('progress').style.width = (Number.isFinite(duration) && duration > 0 ? Math.min(100, time / duration * 100) : 0) + '%';
 }
 
 function trackInfo() {
@@ -60,7 +59,7 @@ function trackInfo() {
     navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist, album: 'Rádio Trânsito SP' });
   }
   const daily = programming.daily();
-  if ($('daily-podcast')) $('daily-podcast').textContent = playlist[daily.index].title;
+  if ($('daily-podcast'))$('daily-podcast').textContent = playlist[daily.index].title;
   progress();
 }
 
@@ -232,8 +231,7 @@ $('play').addEventListener('click', () => {
   if (wanted || announcement) pauseProgram();
   else startProgram();
 });
-$('next').addEventListener('click', advanceProgram);
-$('prev').addEventListener('click', previousProgram);
+$('next').addEventListener('click', advanceProgram);$('prev').addEventListener('click', previousProgram);
 
 for (const element of [current, standby]) {
   element.addEventListener('ended', () => {
@@ -312,8 +310,7 @@ function paintVoices() {
   }
   selector.value = voices.some(v => v.name === weatherVoiceName) ? weatherVoiceName : '';
 }
-if ($('weather-voice')) {
-  $('weather-voice').addEventListener('change', event => {
+if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => {
     weatherVoiceName = event.target.value;
     try { localStorage.setItem('radio_weather_voice', weatherVoiceName); } catch (_) {}
   });
@@ -428,6 +425,127 @@ function speakText(text, job) {
   });
 }
 
+// Dicionário de rodovias da ARTESP para converter códigos (ex: 0021SP) em nomes claros.
+const RODOVIAS_ARTESP = {
+  '015': 'Marginal Tietê / Pinheiros (SP-015)',
+  '021': 'Rodoanel Mário Covas (SP-021)',
+  '050': 'Rodovia Monteiro Lobato (SP-050)',
+  '055': 'Rodovia Padre Manoel da Nóbrega / Rio-Santos (SP-055)',
+  '060': 'Via Dutra (SP-060)',
+  '063': 'Rodovia Luciano Consoline (SP-063)',
+  '065': 'Rodovia Dom Pedro I (SP-065)',
+  '068': 'Rodovia dos Tropeiros (SP-068)',
+  '070': 'Rodovia Ayrton Senna / Carvalho Pinto (SP-070)',
+  '075': 'Rodovia Santos Dumont (SP-075)',
+  '079': 'Rodovia Waldomiro Corrêa de Camargo (SP-079)',
+  '083': 'Anel Viário José Roberto Magalhães Teixeira (SP-083)',
+  '088': 'Rodovia Mogi-Dutra (SP-088)',
+  '098': 'Rodovia Mogi-Bertioga (SP-098)',
+  '099': 'Rodovia dos Tamoios (SP-099)',
+  '101': 'Rodovia Jornalista Francisco Aguirre Proença (SP-101)',
+  '116': 'Rodovia Presidente Dutra / Régis Bittencourt (BR-116)',
+  '123': 'Rodovia Floriano Rodrigues Pinheiro (SP-123)',
+  '125': 'Rodovia Oswaldo Cruz (SP-125)',
+  '127': 'Rodovia Cornélio Pires / Antônio Romano Schincariol (SP-127)',
+  '135': 'Rodovia Margarida da Graça Martins (SP-135)',
+  '147': 'Rodovia Engenheiro João Tosello / Monsenhor Clodoaldo de Paiva (SP-147)',
+  '148': 'Rodovia Caminho do Mar (SP-148)',
+  '150': 'Via Anchieta (SP-150)',
+  '160': 'Rodovia dos Imigrantes (SP-160)',
+  '171': 'Rodovia Paulo Virgínio (SP-171)',
+  '191': 'Rodovia Wilson Finardi (SP-191)',
+  '215': 'Rodovia Vicente Botta / Luís Augusto de Oliveira (SP-215)',
+  '225': 'Rodovia Engenheiro Paulo Nilo Romano (SP-225)',
+  '250': 'Rodovia Bunjiro Nakao / José de Carvalho (SP-250)',
+  '255': 'Rodovia Antônio Machado Sant’Anna / Otávio Pacheco de Almeida Prado (SP-255)',
+  '270': 'Rodovia Raposo Tavares (SP-270)',
+  '280': 'Rodovia Castello Branco (SP-280)',
+  '294': 'Rodovia Comandante João Ribeiro de Barros (SP-294)',
+  '300': 'Rodovia Marechal Rondon (SP-300)',
+  '304': 'Rodovia Luiz de Queiroz (SP-304)',
+  '310': 'Rodovia Washington Luís (SP-310)',
+  '318': 'Rodovia Engenheiro Thales de Lorena Peixoto Júnior (SP-318)',
+  '320': 'Rodovia Euclides da Cunha (SP-320)',
+  '321': 'Rodovia Cezário José de Castilho (SP-321)',
+  '322': 'Rodovia Prefeito Antônio Duarte Nogueira (SP-322)',
+  '324': 'Anel Viário Magalhães Teixeira (SP-324)',
+  '326': 'Rodovia Brigadeiro Faria Lima (SP-326)',
+  '330': 'Via Anhanguera (SP-330)',
+  '333': 'Rodovia Abrão Assed / Carlos Tonanni / Rachid Rayes (SP-333)',
+  '334': 'Rodovia Cândido Portinari (SP-334)',
+  '340': 'Rodovia Adhemar de Barros (SP-340)',
+  '342': 'Rodovia Governador Doutor Adhemar Pereira de Barros (SP-342)',
+  '344': 'Rodovia Dom Tomás Vaquero (SP-344)',
+  '348': 'Rodovia dos Bandeirantes (SP-348)',
+  '350': 'Rodovia Deputado Eduardo Vicente Nasser (SP-350)',
+  '360': 'Rodovia Engenheiro Constâncio Cintra (SP-360)',
+  '374': 'Rodovia Prefeito Quintino de Lima (SP-374)',
+  '381': 'Rodovia Fernão Dias (BR-381)',
+  '425': 'Rodovia Assis Chateaubriand (SP-425)',
+  '463': 'Rodovia Elyeser Montenegro Magalhães (SP-463)',
+  '501': 'Rodovia Júlio Budiski (SP-501)'
+};
+
+function formatTrafficItem(raw) {
+  if (typeof raw !== 'string') return '';
+  let text = raw.trim();
+
+  // 1. Substitui códigos como "Rodovia 0021SP", "0021SP", "SP-021" pelo nome conhecido da via
+  text = text.replace(/\b(?:rodovia\s+)?(?:sp[\s\-/]*)?0*(\d{2,3})[\s\-/]*sp\b/gi, (_, digits) => {
+    const code = digits.padStart(3, '0');
+    const num = parseInt(digits, 10);
+    return RODOVIAS_ARTESP[code] || `Rodovia SP-${num}`;
+  });
+
+  // Caso venha no formato inverso "Rodovia SP 0021"
+  text = text.replace(/\b(?:rodovia\s+)?sp[\s\-/]+0*(\d{2,3})\b/gi, (_, digits) => {
+    const code = digits.padStart(3, '0');
+    const num = parseInt(digits, 10);
+    return RODOVIAS_ARTESP[code] || `Rodovia SP-${num}`;
+  });
+
+  // 2. Remove "sentido não se aplica", "sentido N/A", "sentido não informado", etc.
+  text = text.replace(/(?:,\s*|\s+-\s+|\s+)?\b(?:no\s+)?sentido\s+(?:n[aã]o\s+se\s+aplica|n\/a|n\.a\.|n[aã]o\s+informado|indefinido|nenhum|-)\b(?:\s*,|\s*-\s*)?/gi, ' ');
+
+  // 3. Expande siglas de sentido isoladas caso existam (ex: "sentido L", "sentido Cap")
+  const sentidos = {
+    'n': 'Norte', 's': 'Sul', 'l': 'Leste', 'o': 'Oeste', 'w': 'Oeste',
+    'cap': 'Capital', 'int': 'Interior', 'lit': 'Litoral',
+    'ambos': 'ambos os sentidos'
+  };
+  text = text.replace(/\bsentido\s+(n|s|l|o|w|cap|int|lit|ambos)\b(?![a-zà-ú])/gi, (_, sigla) => {
+    const expandido = sentidos[sigla.toLowerCase()];
+    return expandido === 'ambos os sentidos' ? 'em ambos os sentidos' : `sentido ${expandido}`;
+  });
+
+  // 4. Limpa pontuações ou espaços duplicados resultantes da remoção
+  text = text
+    .replace(/\s+,/g, ',')
+    .replace(/,{2,}/g, ',')
+    .replace(/\.\s*,/g, '.')
+    .replace(/:\s*,/g, ':')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s,;-]+|[\s,;-]+$/g, '')
+    .trim();
+
+  return text;
+}
+
+function prepareTrafficSpeech(text) {
+  // Ajusta siglas e abreviações para que o sintetizador de voz leia naturalmente
+  return text
+    .replace(/\(SP-0*(\d+)\)/gi, ', S P $1,')
+    .replace(/\(BR-0*(\d+)\)/gi, ', B R $1,')
+    .replace(/\bSP-0*(\d+)\b/gi, 'S P $1')
+    .replace(/\bBR-0*(\d+)\b/gi, 'B R $1')
+    .replace(/\bDom Pedro I\b/g, 'Dom Pedro Primeiro')
+    .replace(/\bkm\s*(\d+)/gi, 'quilômetro $1')
+    .replace(/\s+,/g, ',')
+    .replace(/,{2,}/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 let items = [], updated = null, timestampVerified = true;
 const DEFAULT_FEED_URL = 'https://radio-transito-sp.lazarowww86.workers.dev/boletins';
 const feedURL = DEFAULT_FEED_URL;
@@ -454,8 +572,7 @@ function report() {
     $('traffic').textContent = 'A fonte não apresenta atualização recente.';
   } else {
     const label = official ? timestampKind === 'resposta_oficial_http' ? 'Resposta oficial da ARTESP: ' : 'Consulta oficial da ARTESP: ' : 'Atualizado: ';
-    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    $('traffic').textContent = items.slice(0, 6).join(' • ');
+    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });$('traffic').textContent = items.slice(0, 6).join(' • ');
   }
 }
 
@@ -473,7 +590,11 @@ async function refresh() {
     const data = await response.json();
     if (!Array.isArray(data.items) || typeof data.updated_at !== 'string' || !Number.isFinite(Date.parse(data.updated_at))) throw new Error('JSON inválido');
     if (sequence !== feedRequest) return false;
-    items = data.items.filter(x => typeof x === 'string' && x.trim().length > 0 && x.length < 350).map(x => x.trim()).slice(0, 10);
+    items = data.items
+      .filter(x => typeof x === 'string' && x.trim().length > 0 && x.length < 350)
+      .map(x => formatTrafficItem(x))
+      .filter(x => x.length > 0)
+      .slice(0, 10);
     updated = data.updated_at;
     timestampVerified = data.data_timestamp_verified !== false;
     timestampKind = typeof data.timestamp_kind === 'string' ? data.timestamp_kind : '';
@@ -494,7 +615,7 @@ async function refresh() {
 
 async function trafficBulletin() {
   if (!feedFresh()) { report(); return; }
-  const text = items.slice(0, 6).join('. ');
+  const text = prepareTrafficSpeech(items.slice(0, 6).join('. '));
   const job = beginAnnouncement('traffic');
   if (!job) {
     if (!canSpeak()) $('traffic-status').textContent = 'A leitura por voz não está disponível neste navegador.';
@@ -507,8 +628,7 @@ async function trafficBulletin() {
   } finally { finishAnnouncement(job); }
 }
 
-$('speak').addEventListener('click', trafficBulletin);
-$('refresh').addEventListener('click', refresh);
+$('speak').addEventListener('click', trafficBulletin);$('refresh').addEventListener('click', refresh);
 refresh();
 setInterval(async () => {
   const fresh = await refresh();
@@ -562,7 +682,7 @@ function previousProgram() {
 }
 function syncSchedule() {
   const daily = programming.daily();
-  if ($('daily-podcast')) $('daily-podcast').textContent = playlist[daily.index].title;
+  if ($('daily-podcast'))$('daily-podcast').textContent = playlist[daily.index].title;
   const upcoming = programming.upcoming();
   if (upcoming && upcoming.inSeconds <= 120) warmMedia(playlist[upcoming.index].src);
   if (!wanted) return false;
@@ -605,7 +725,7 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
       }
     });
   } catch (_) {
-    if ($('weather-status')) $('weather-status').textContent = 'Previsão temporariamente indisponível.';
+    if ($('weather-status'))$('weather-status').textContent = 'Previsão temporariamente indisponível.';
   }
 }
 
