@@ -1,4 +1,4 @@
-const BUILD = '20261013-r6-artesp';
+const BUILD = '20261013-r7-ui';
 const MEDIA_BUILD = '20261013-r2-light';
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);
@@ -6,7 +6,7 @@ const SHELL = `${PREFIX}${SCOPE}-shell-${BUILD}`;
 const MEDIA = `${PREFIX}${SCOPE}-media-${MEDIA_BUILD}`;
 const CORE = [
   './', './index.html', `./styles.css?v=${BUILD}`, `./music-tracks.js?v=${BUILD}`, `./programming.js?v=${BUILD}`, `./weather.js?v=${BUILD}`, `./app.js?v=${BUILD}`,
-  './manifest.json', './icon.svg'
+  './manifest.json', `./icon.svg?v=${BUILD}`, `./icon-192.png?v=${BUILD}`, `./icon-512.png?v=${BUILD}`, `./icon-maskable-512.png?v=${BUILD}`, `./apple-touch-icon.png?v=${BUILD}`
 ];
 const urlFor = path => new URL(path, self.registration.scope).href;
 

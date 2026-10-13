@@ -430,14 +430,9 @@ function speakText(text, job) {
 
 let items = [], updated = null, timestampVerified = true;
 const DEFAULT_FEED_URL = 'https://radio-transito-sp.lazarowww86.workers.dev/boletins';
-let feedURL = DEFAULT_FEED_URL, feedRequest = 0, feedController = null;
+const feedURL = DEFAULT_FEED_URL;
+let feedRequest = 0, feedController = null;
 let feedLoading = false, feedError = '', timestampKind = '';
-try {
-  const saved = localStorage.getItem('radio_feed');
-  if (saved && new URL(saved).protocol === 'https:') feedURL = saved;
-} catch (_) {}
-const feed = $('feed');
-feed.value = feedURL;
 
 function feedFresh() {
   const age = Date.now() - Date.parse(updated);
@@ -483,14 +478,12 @@ async function refresh() {
     timestampVerified = data.data_timestamp_verified !== false;
     timestampKind = typeof data.timestamp_kind === 'string' ? data.timestamp_kind : '';
     feedLoading = false;
-    $('feed-status').textContent = 'Fonte consultada com sucesso.';
     report();
     return feedFresh();
   } catch (error) {
     if (sequence !== feedRequest) return false;
     items = []; updated = null;
     feedError = 'Fonte indisponível'; feedLoading = false; timestampKind = '';
-    $('feed-status').textContent = 'Não foi possível consultar a fonte: ' + error.message;
     report();
     return false;
   } finally {
@@ -504,7 +497,7 @@ async function trafficBulletin() {
   const text = items.slice(0, 6).join('. ');
   const job = beginAnnouncement('traffic');
   if (!job) {
-    if (!canSpeak()) $('feed-status').textContent = 'A leitura por voz não está disponível neste navegador.';
+    if (!canSpeak()) $('traffic-status').textContent = 'A leitura por voz não está disponível neste navegador.';
     return;
   }
   try {
@@ -514,18 +507,6 @@ async function trafficBulletin() {
   } finally { finishAnnouncement(job); }
 }
 
-$('save').addEventListener('click', () => {
-  const value = feed.value.trim() || DEFAULT_FEED_URL;
-  if (value) {
-    try { if (new URL(value).protocol !== 'https:') throw new Error(); }
-    catch (_) { $('feed-status').textContent = 'Use um endereço HTTPS válido.'; return; }
-  }
-  feedURL = value;
-  feed.value = value;
-  try { localStorage.setItem('radio_feed', value); }
-  catch (_) { $('feed-status').textContent = 'Fonte aplicada nesta sessão; o navegador bloqueou o salvamento.'; }
-  refresh();
-});
 $('speak').addEventListener('click', trafficBulletin);
 $('refresh').addEventListener('click', refresh);
 refresh();

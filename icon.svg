@@ -1,1 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#101828"/><text x="96" y="125" font-size="100" text-anchor="middle">📻</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Rádio Trânsito SP">
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#071421"/>
+      <stop offset="1" stop-color="#123747"/>
+    </linearGradient>
+    <linearGradient id="radio" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#5AF5DD"/>
+      <stop offset="1" stop-color="#16CBB9"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="104" fill="url(#background)"/>
+  <path d="M154 240 214 158" fill="none" stroke="#F4FFFF" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="214" cy="158" r="8" fill="#5AF5DD"/>
+  <path d="M340 158c22 17 22 49 0 66M369 132c42 32 42 83 0 114" fill="none" stroke="#F4FFFF" stroke-width="12" stroke-linecap="round"/>
+  <rect x="110" y="240" width="292" height="144" rx="36" fill="#000" opacity=".12"/>
+  <rect x="110" y="230" width="292" height="144" rx="36" fill="url(#radio)"/>
+  <circle cx="184" cy="302" r="39" fill="#092735"/>
+  <path d="m174 285 25 17-25 17z" fill="#F4FFFF" stroke="#F4FFFF" stroke-width="5" stroke-linejoin="round"/>
+  <g fill="#092735">
+    <rect x="253" y="280" width="10" height="44" rx="5"/>
+    <rect x="275" y="291" width="10" height="22" rx="5"/>
+    <rect x="297" y="273" width="10" height="58" rx="5"/>
+    <rect x="319" y="287" width="10" height="30" rx="5"/>
+    <rect x="341" y="280" width="10" height="44" rx="5"/>
+  </g>
+</svg>
