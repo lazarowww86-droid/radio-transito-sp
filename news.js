@@ -34,7 +34,7 @@ function create(hooks) {
   let seen = new Set();
   try {
     const value = JSON.parse(localStorage.getItem('radio_news_seen') || '[]');
-    if (Array.isArray(value)) seen = new Set(value.filter(x => typeof x => typeof x === 'string').slice(-200));
+    if (Array.isArray(value)) seen = new Set(value.filter(x => typeof x === 'string').slice(-200));
   } catch (_) {}
   const time = value => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
   function fresh() { return snapshot && Date.now() - snapshot.checked <= 45 * 60000 && snapshot.items.some(item => validItem(item)); }
