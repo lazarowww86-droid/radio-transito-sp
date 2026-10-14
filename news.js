@@ -29,7 +29,7 @@ function parse(data, now = Date.now()) {
 }
 function create(hooks) {
   const $ = id => document.getElementById(id);
-  if (!$('news-panel') || !$('news-list') || !$('news-speak') || !$('news-status')) return null;
+  if (!$('news-panel') \vert{}\vert{} !$('news-list') || !$('news-speak') \vert{}\vert{} !$('news-status')) return null;
   let snapshot = null, inFlight = null, busy = false, nextCheck = 0, nextAt = null, interaction = 0, waitingSince = null;
   let seen = new Set();
   try {
@@ -50,6 +50,11 @@ function create(hooks) {
     }
   }
   function message(text) { $('news-status').textContent = text; }
+  function updateDefaultMessage() {
+    if (!fresh()) return;
+    const available = new Set(snapshot.items.map(item => item.source_id)).size;
+    message(`Manchetes consultadas em ${time(snapshot.checked)}.${available < 4 ? ' Algumas fontes estão temporariamente indisponíveis.' : ''}`);
+  }
   function refresh() {
     if (inFlight) return inFlight;
     const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 12000);
@@ -60,8 +65,7 @@ function create(hooks) {
         snapshot = parse(await response.json());
         nextCheck = Date.now() + INTERVAL;
         paint();
-        const available = new Set(snapshot.items.map(item => item.source_id)).size;
-        message(`Manchetes consultadas em ${time(snapshot.checked)}.${available < 4 ? ' Algumas fontes estão temporariamente indisponíveis.' : ''}`);
+        updateDefaultMessage();
         return true;
       } catch (_) {
         nextCheck = Date.now() + 5 * 60000;
@@ -91,18 +95,26 @@ function create(hooks) {
     const token = interaction, listening = hooks.isListening();
     const stillValid = () => token === interaction && (manual ? !listening || hooks.isListening() : hooks.isListening());
     try {
-      if ((!fresh() || Date.now() >= nextCheck) && !await refresh()) return false;
+      // Se for clique manual e já houver manchetes válidas na tela, não espera novo fetch()
+      // para não perder a permissão de voz do navegador mobile (User Gesture).
+      if (!fresh() || (!manual && Date.now() >= nextCheck)) {
+        if (!await refresh()) return false;
+      }
       const items = selection(manual);
       if (!items.length) { if (manual) message('Nenhuma manchete recente disponível.'); return false; }
       if (!stillValid() || !hooks.canAnnounce(manual)) return false;
       const phrases = ['Rádio Trânsito SP. Confira as manchetes.'];
       for (const item of items) phrases.push(`Segundo ${item.source}, ${item.title}.`);
       phrases.push('Mais informações nos links da nossa página. Rádio Trânsito SP.');
+      if (manual) message('Lendo as manchetes em destaque…');
       const ok = await hooks.announce(phrases, stillValid);
       if (ok && stillValid()) {
         for (const item of items) seen.add(item.url);
         seen = new Set([...seen].slice(-200));
         try { localStorage.setItem('radio_news_seen', JSON.stringify([...seen])); } catch (_) {}
+        updateDefaultMessage();
+      } else if (manual && stillValid()) {
+        message('A leitura por voz não está disponível no momento. Confira as manchetes no painel.');
       }
       return Boolean(ok);
     } finally { busy = false; $('news-speak').disabled = false; }
