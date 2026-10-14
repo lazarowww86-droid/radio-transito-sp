@@ -55,6 +55,8 @@ let idx = 0, wanted = false, announcement = null, playSequence = 0;
 let pendingPlay = false, singleDeck = false, unlocked = false;
 let failureTimer = null, lastProgress = Date.now(), lastPosition = -1;
 const failedSources = new Set();
+const RECOVERY_WINDOW = 6000;
+let recovery = null, recoveryTimer = null;
 const mediaCache = new Map(), preloads = new Map();
 const mediaURL = src => new URL(`${src}?v=${BUILD}`, document.baseURI).href;
 const wrap = i => (i + playlist.length) % playlist.length;
@@ -205,6 +207,7 @@ function playCurrent(fallbackElement = null) {
 }
 
 function activate(index, reuse = null, seek = 0) {
+  cancelRecovery();
   clearTimeout(failureTimer);
   failureTimer = null;
   cancelAnnouncement();
@@ -230,8 +233,9 @@ function activate(index, reuse = null, seek = 0) {
   preloadFollowing();
 }
 
-function failTrack(element) {
-  if (element !== current || announcement || failureTimer !== null) return;
+function skipFailedTrack(element) {
+  if (element !== current || !wanted || announcement || failureTimer !== null) return;
+  cancelRecovery();
   failedSources.add(playlist[idx].src);
   let next = programming.next(), searched = 0;
   while (failedSources.has(playlist[next].src) && ++searched < musicTracks.length) next = programming.next();
@@ -248,7 +252,63 @@ function failTrack(element) {
   failureTimer = setTimeout(() => { failureTimer = null; activate(next); }, 0);
 }
 
+// A ausência de timeupdate não prova que o áudio parou (por exemplo, em segundo plano).
+function cancelRecovery() {
+  clearTimeout(recoveryTimer);
+  recoveryTimer = null;
+  recovery = null;
+}
+
+function recoveryAdvanced(job) {
+  return current === job.element && idx === job.index &&
+    Number.isFinite(current.currentTime) && current.currentTime > job.position + 0.1;
+}
+
+function observePlayback() {
+  const position = current.currentTime;
+  if (Number.isFinite(position) && position !== lastPosition) {
+    lastPosition = position;
+    lastProgress = Date.now();
+  }
+  if (recovery && recoveryAdvanced(recovery)) cancelRecovery();
+}
+
+function failTrack(element) {
+  if (element !== current || !wanted || announcement || failureTimer !== null) return;
+  if (recovery) {
+    // Um novo erro após a tentativa confirma a falha; não reinicia um ciclo infinito.
+    if (element.error) skipFailedTrack(element);
+    return;
+  }
+  const position = Math.max(0, Number(element.currentTime) || 0, Number(lastPosition) || 0);
+  const job = { element, index: idx, position };
+  recovery = job;
+  // Só recarrega o arquivo quando o elemento informou erro. Em buffering,
+  // preserva o que já está carregado e tenta continuar no mesmo elemento.
+  if (element.error) {
+    ++playSequence;
+    pendingPlay = false;
+    element.dataset.startOffset = String(position);
+    prepare(element, idx, true);
+    if (element.readyState >= 1) {
+      try { element.currentTime = position; } catch (_) {}
+    }
+  }
+  playCurrent();
+  if (recovery !== job || !wanted || announcement) return;
+  status('Restabelecendo a mesma faixa…');
+  recoveryTimer = setTimeout(() => {
+    if (recovery !== job) return;
+    if (!wanted || announcement || current !== job.element || idx !== job.index || recoveryAdvanced(job)) {
+      cancelRecovery();
+      return;
+    }
+    skipFailedTrack(job.element);
+  }, RECOVERY_WINDOW);
+}
+
 function pauseProgram() {
+  cancelRecovery();
   wanted = false;
   ++playSequence;
   pendingPlay = false;
@@ -307,16 +367,15 @@ for (const element of [current, standby]) {
   });
   element.addEventListener('timeupdate', () => {
     if (element !== current) return;
-    if (element.currentTime !== lastPosition) {
-      lastPosition = element.currentTime;
-      lastProgress = Date.now();
-    }
+    observePlayback();
     progress();
   });
 }
 
 setInterval(() => {
-  if (wanted && !announcement && Date.now() - lastProgress > 12000) failTrack(current);
+  if (!wanted || announcement) return;
+  observePlayback();
+  if (!current.ended && !recovery && Date.now() - lastProgress > 12000) failTrack(current);
 }, 1000);
 
 function nativeTTSAvailable() {
@@ -384,6 +443,9 @@ if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => 
 
 function beginAnnouncement(kind) {
   if (announcement) return null;
+  clearTimeout(failureTimer);
+  failureTimer = null;
+  cancelRecovery();
   const job = { kind, cancelled: false, cleanups: new Set() };
   announcement = job;
   ++playSequence;
