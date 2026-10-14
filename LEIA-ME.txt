@@ -1,5 +1,4 @@
-Restaura o código de voz anterior às versões 20, 21 e 22.
-Enviar app.js, weather.js, index.html e sw.js à raiz do repositório.
-Mantém músicas, podcasts, notícias, vinhetas e nomes das rodovias.
-Restaura também os horários anteriores: hora a cada dez minutos, previsão a cada trinta minutos. Não promete previsão um minuto após Play.
-Não foi possível confirmar o som em um Samsung físico.
+Enviar app.js, weather.js, index.html e sw.js à raiz do GitHub.
+Leitura manual usa previsão válida já carregada, iniciando a tentativa no toque. Se precisar atualizar dados, pede novo toque.
+Música pausa durante os avisos; programação, músicas, podcasts e vinhetas preservados.
+Falhas da voz agora mostram o código retornado pelo navegador. Não foi possível validar som no Samsung físico.

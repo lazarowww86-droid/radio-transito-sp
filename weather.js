@@ -161,14 +161,20 @@ function create(hooks) {
     bulletinRunning = true;
     buttons(true);
     try {
-      const loaded = await refresh(); // A programação continua durante toda a consulta.
+      // Na leitura manual, usa a previsão válida sem perder o toque em uma consulta.
+      const readyAtClick = manual && fresh(snapshot);
+      const loaded = readyAtClick || await refresh(); // A programação continua durante a consulta.
+      if (manual && !readyAtClick && loaded && fresh(snapshot)) {
+        message('Previsão atualizada. Toque novamente em OUVIR BOLETIM para iniciar a voz.');
+        return;
+      }
       if (revision !== interaction || (wasListening && !hooks.isListening())) return;
       if (!loaded || !fresh(snapshot)) { if (!manual) nextAt = Date.now() + RETRY; return; }
       if (!hooks.canAnnounce(manual)) { if (!manual) nextAt = Date.now() + 5000; return; }
       const said = await hooks.announce(text(snapshot), snapshot, () => revision === interaction && (!wasListening || hooks.isListening()) && fresh(snapshot));
       if (revision !== interaction) return;
       nextAt = Date.now() + (said ? INTERVAL : RETRY);
-      if (!said) message('A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
+      if (!said) message(hooks.voiceFailure?.() || 'A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
     } catch (_) {
       if (revision === interaction) message('Não foi possível ler o boletim. Consulte a previsão no painel.');
       if (!manual) nextAt = Date.now() + RETRY;

@@ -289,7 +289,23 @@ function canSpeak() {
   return 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
 }
 
-let weatherVoiceName = '';
+let weatherVoiceName = '', speechIssue = '';
+function speechFailureMessage() {
+  const descriptions = {
+    'not-allowed': 'O navegador bloqueou o início da leitura',
+    'synthesis-failed': 'O navegador informou falha ao produzir a voz',
+    'synthesis-unavailable': 'O navegador não disponibilizou um motor de voz',
+    'voice-unavailable': 'A voz selecionada não está disponível',
+    'language-unavailable': 'O navegador não disponibilizou voz em português',
+    'network': 'A conexão usada pela voz falhou',
+    'audio-busy': 'A saída de áudio estava ocupada',
+    'audio-hardware': 'A saída de áudio não estava disponível',
+    'no-start': 'A leitura não iniciou dentro do prazo',
+    'stalled': 'A leitura não terminou dentro do prazo',
+    'unsupported': 'A leitura por voz não foi disponibilizada pelo navegador'
+  };
+  return (descriptions[speechIssue] || 'O navegador não completou a leitura') + '. Código: ' + (speechIssue || 'sem-evento') + '.';
+}
 try { weatherVoiceName = localStorage.getItem('radio_weather_voice') || ''; } catch (_) {}
 function portugueseVoices() {
   return canSpeak() ? window.speechSynthesis.getVoices().filter(v => v.lang.replace('_', '-').toLowerCase() === 'pt-br') : [];
@@ -395,7 +411,7 @@ function playSting(src, job) {
 }
 
 function speakText(text, job) {
-  if (job.cancelled || announcement !== job || !canSpeak()) return Promise.resolve(false);
+  if (job.cancelled || announcement !== job || !canSpeak()) { if (!canSpeak()) speechIssue = 'unsupported'; return Promise.resolve(false); }
   return new Promise(resolve => {
     const synth = window.speechSynthesis, utterance = new SpeechSynthesisUtterance(text);
     let settled = false, started = false, timer, poll;
@@ -407,6 +423,7 @@ function speakText(text, job) {
       utterance.onstart = utterance.onend = utterance.onerror = null;
       job.cleanups.delete(cancel);
       if (!ok) synth.cancel();
+      else speechIssue = '';
       resolve(ok);
     };
     const cancel = () => finish(false);
@@ -419,18 +436,18 @@ function speakText(text, job) {
     utterance.onstart = () => {
       started = true;
       clearTimeout(timer);
-      timer = setTimeout(cancel, Math.min(180000, Math.max(15000, text.length / 8 * 1000 + 5000)));
+      timer = setTimeout(() => { speechIssue = 'stalled'; cancel(); }, Math.min(180000, Math.max(15000, text.length / 8 * 1000 + 5000)));
     };
     utterance.onend = () => finish(true);
-    utterance.onerror = cancel;
+    utterance.onerror = event => { speechIssue = event?.error || 'sem-codigo'; cancel(); };
     // Algumas implementações deixam de emitir onend. O estado do sintetizador é a reserva.
     poll = setInterval(() => { if (started && !synth.speaking && !synth.pending) finish(true); }, 500);
-    timer = setTimeout(cancel, 3000);
+    timer = setTimeout(() => { speechIssue = 'no-start'; cancel(); }, 3000);
     try {
       synth.cancel();
       synth.resume();
       synth.speak(utterance);
-    } catch (_) { cancel(); }
+    } catch (error) { speechIssue = error?.name || 'exception'; cancel(); }
   });
 }
 
@@ -754,12 +771,13 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
   try {
     window.RadioWeather.create({
       isListening: () => wanted,
+      voiceFailure: speechFailureMessage,
       unlockVoice: unlockAuxiliaryAudio,
       canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
       announce: async (text, snapshot, stillValid = () => true) => {
         if (!stillValid() || announcement || pendingPlay) return false;
         const job = beginAnnouncement('weather');
-        if (!job) return false;
+        if (!job) { if (!canSpeak()) speechIssue = 'unsupported'; return false; }
         try {
           // Frases curtas mantêm os limites de espera da voz pequenos.
           const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
