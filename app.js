@@ -2,6 +2,29 @@
 'use strict';
 const $ = id => document.getElementById(id);
 
+// Cache rápido em memória para evitar que o await refresh() do weather.js atrase o clique no celular
+if (typeof window.fetch === 'function') {
+  const nativeFetch = window.fetch.bind(window);
+  let lastWeatherBody = null, lastWeatherTime = 0;
+  window.fetch = async function(input, init) {
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (url.includes('api.open-meteo.com/v1/forecast')) {
+      if (lastWeatherBody && Date.now() - lastWeatherTime < 120000) {
+        return new Response(lastWeatherBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      const res = await nativeFetch(input, init);
+      if (res.ok) {
+        try {
+          lastWeatherBody = await res.clone().text();
+          lastWeatherTime = Date.now();
+        } catch (_) {}
+      }
+      return res;
+    }
+    return nativeFetch(input, init);
+  };
+}
+
 // Um podcast por dia, repetido nos horários fixos; música aleatória no restante do dia.
 const podcasts = [
  {type:'podcast',title:'Maníaco do Parque: era psicopata ou doente?',artist:'Histórias que Marcaram',src:'media/maniaco-do-parque.mp3',duration:1192.882},
@@ -121,21 +144,8 @@ function unlockAuxiliaryAudio() {
       }).catch(() => { element.muted = false; });
     }
   }
-  // Crítico para celulares Android (S24 Ultra): como weather.js e news.js fazem um await refresh()
-  // antes de chamar announce(), precisamos destravar o speechSynthesis no milissegundo do clique!
-  if (canSpeak() && !announcement) {
-    try {
-      const synth = window.speechSynthesis;
-      synth.getVoices();
-      if (!synth.speaking && !synth.pending) {
-        const primer = new SpeechSynthesisUtterance(' ');
-        primer.lang = 'pt-BR';
-        primer.volume = 0;
-        primer.rate = 2;
-        synth.speak(primer);
-      }
-      if (synth.paused) synth.resume();
-    } catch (_) {}
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.getVoices(); } catch (_) {}
   }
 }
 
@@ -291,18 +301,21 @@ setInterval(() => {
   if (wanted && !announcement && Date.now() - lastProgress > 12000) failTrack(current);
 }, 1000);
 
-// Avisos pausam o elemento atual e o retomam sem recarregar o podcast.
-function canSpeak() {
+function nativeTTSAvailable() {
   return 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
 }
 
-const isAndroid = /Android/i.test(navigator.userAgent || '');
+function canSpeak() {
+  return true;
+}
+
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
 
 let weatherVoiceName = '';
 try { weatherVoiceName = localStorage.getItem('radio_weather_voice') || ''; } catch (_) {}
 
 function portugueseVoices() {
-  if (!canSpeak()) return [];
+  if (!nativeTTSAvailable()) return [];
   const all = window.speechSynthesis.getVoices() || [];
   return all.filter(v => {
     const lang = (v.lang || '').replace('_', '-').toLowerCase();
@@ -324,7 +337,7 @@ function selectedVoice(kind) {
 
 function paintVoices() {
   const selector = $('weather-voice');
-  if (!selector || !canSpeak()) return;
+  if (!selector) return;
   const voices = portugueseVoices(), preferred = preferredWeatherVoice(voices);
   selector.replaceChildren();
   const automatic = document.createElement('option');
@@ -344,7 +357,7 @@ if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => 
     weatherVoiceName = event.target.value;
     try { localStorage.setItem('radio_weather_voice', weatherVoiceName); } catch (_) {}
   });
-  if (canSpeak()) {
+  if (nativeTTSAvailable()) {
     try { window.speechSynthesis.onvoiceschanged = paintVoices; } catch (_) {}
     window.speechSynthesis.addEventListener?.('voiceschanged', paintVoices);
     paintVoices();
@@ -352,7 +365,7 @@ if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => 
 }
 
 function beginAnnouncement(kind) {
-  if (announcement || !canSpeak()) return null;
+  if (announcement) return null;
   const job = { kind, cancelled: false, cleanups: new Set() };
   announcement = job;
   ++playSequence;
@@ -370,7 +383,7 @@ function cancelAnnouncement() {
   job.cancelled = true;
   for (const cleanup of [...job.cleanups]) cleanup();
   bulletinAudio.pause();
-  if (canSpeak()) {
+  if (nativeTTSAvailable()) {
     try { window.speechSynthesis.cancel(); } catch (_) {}
   }
 }
@@ -418,18 +431,84 @@ function playSting(src, job) {
   });
 }
 
-function speakText(text, job, resetQueue = false) {
-  const clean = typeof text === 'string' ? text.trim() : '';
-  if (!clean) return Promise.resolve(true);
-  if (job.cancelled || announcement !== job || !canSpeak()) return Promise.resolve(false);
+function splitIntoChunks(text, maxLen = 170) {
+  const sentences = text.match(/[^.!?]+[.!?]?/g) || [text];
+  const chunks = [];
+  for (const s of sentences) {
+    const words = s.trim().split(/\s+/);
+    let currentChunk = '';
+    for (const word of words) {
+      if (!word) continue;
+      if ((currentChunk + ' ' + word).trim().length <= maxLen) {
+        currentChunk = (currentChunk + ' ' + word).trim();
+      } else {
+        if (currentChunk) chunks.push(currentChunk);
+        currentChunk = word;
+      }
+    }
+    if (currentChunk) chunks.push(currentChunk);
+  }
+  return chunks;
+}
+
+// Reproduz a voz pelo elemento <audio id="bulletin-audio"> caso o speechSynthesis do celular não responda
+async function speakViaAudioFallback(text, job) {
+  const chunks = splitIntoChunks(text, 170);
+  const endpoints = [
+    q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=${encodeURIComponent(q)}`,
+    q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=pt-BR&q=${encodeURIComponent(q)}`
+  ];
+  for (const chunk of chunks) {
+    if (job.cancelled || announcement !== job) return false;
+    let chunkSpoken = false;
+    for (const makeUrl of endpoints) {
+      if (job.cancelled || announcement !== job) return false;
+      const ok = await new Promise(resolve => {
+        let settled = false, timer;
+        const finish = result => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          bulletinAudio.onended = bulletinAudio.onerror = bulletinAudio.onplaying = null;
+          bulletinAudio.pause();
+          job.cleanups.delete(cancel);
+          resolve(result);
+        };
+        const cancel = () => finish(false);
+        job.cleanups.add(cancel);
+        bulletinAudio.onended = () => finish(true);
+        bulletinAudio.onerror = cancel;
+        bulletinAudio.onplaying = () => {
+          clearTimeout(timer);
+          timer = setTimeout(cancel, 25000);
+        };
+        timer = setTimeout(cancel, 5000);
+        bulletinAudio.muted = false;
+        bulletinAudio.removeAttribute('crossorigin');
+        bulletinAudio.src = makeUrl(chunk);
+        bulletinAudio.load();
+        Promise.resolve(bulletinAudio.play()).catch(cancel);
+      });
+      if (ok) {
+        chunkSpoken = true;
+        break;
+      }
+    }
+    if (!chunkSpoken) return false;
+  }
+  return true;
+}
+
+function speakNative(clean, job) {
+  if (!nativeTTSAvailable() || job.useAudioFallback) return Promise.resolve(false);
   return new Promise(resolve => {
-    const synth = window.speechSynthesis, utterance = new SpeechSynthesisUtterance(clean);
-    let settled = false, started = false, timer, poll, speakDelay;
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(clean);
+    let settled = false, started = false, timer, poll;
     const finish = ok => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      clearTimeout(speakDelay);
       clearInterval(poll);
       utterance.onstart = utterance.onend = utterance.onerror = null;
       job.cleanups.delete(cancel);
@@ -444,7 +523,7 @@ function speakText(text, job, resetQueue = false) {
     utterance.lang = 'pt-BR';
     utterance.rate = 1;
 
-    if (!isAndroid || (job.kind === 'weather' && weatherVoiceName)) {
+    if (!isMobile || (job.kind === 'weather' && weatherVoiceName)) {
       const voice = selectedVoice(job.kind);
       if (voice) utterance.voice = voice;
     }
@@ -453,7 +532,7 @@ function speakText(text, job, resetQueue = false) {
       if (started) return;
       started = true;
       clearTimeout(timer);
-      timer = setTimeout(cancel, Math.min(180000, Math.max(15000, clean.length / 8 * 1000 + 5000)));
+      timer = setTimeout(cancel, Math.min(180000, Math.max(15000, clean.length / 7 * 1000 + 6000)));
     };
 
     utterance.onstart = markStarted;
@@ -467,24 +546,27 @@ function speakText(text, job, resetQueue = false) {
     poll = setInterval(() => {
       if (synth.speaking) markStarted();
       else if (started && !synth.pending) finish(true);
-    }, 250);
-    timer = setTimeout(cancel, 8000);
+    }, 200);
+    // Aguarda 2 segundos para a voz nativa do aparelho iniciar; se não iniciar (como no celular), cai para o fallback de áudio
+    timer = setTimeout(cancel, 2000);
     try {
-      if (resetQueue && (synth.speaking || synth.pending)) {
-        synth.cancel();
-        speakDelay = setTimeout(() => {
-          if (settled || job.cancelled || announcement !== job) return;
-          try {
-            if (synth.paused) synth.resume();
-            synth.speak(utterance);
-          } catch (_) { cancel(); }
-        }, 60);
-      } else {
-        if (synth.paused) synth.resume();
-        synth.speak(utterance);
-      }
+      if (synth.paused) synth.resume();
+      synth.speak(utterance);
     } catch (_) { cancel(); }
   });
+}
+
+async function speakText(text, job) {
+  const clean = typeof text === 'string' ? text.trim() : '';
+  if (!clean) return true;
+  if (job.cancelled || announcement !== job) return false;
+
+  const nativeOk = await speakNative(clean, job);
+  if (nativeOk) return true;
+  if (job.cancelled || announcement !== job) return false;
+
+  job.useAudioFallback = true;
+  return speakViaAudioFallback(clean, job);
 }
 
 // Dicionário de rodovias da ARTESP para converter códigos técnicos (ex: 0021SP, SPD 006/021) em nomes claros.
@@ -701,7 +783,7 @@ async function trafficBulletin() {
   }
   try {
     await playSting('media/vinheta-transito-mix.mp3', job);
-    const spoken = await speakText(text, job, true);
+    const spoken = await speakText(text, job);
     if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
   } finally { finishAnnouncement(job); }
 }
@@ -737,7 +819,7 @@ function checkTimeAnnouncement() {
   const job = beginAnnouncement('time');
   if (!job) return;
   lastTimeSlot = slot;
-  speakText(timeText(parts), job, true).finally(() => finishAnnouncement(job));
+  speakText(timeText(parts), job).finally(() => finishAnnouncement(job));
 }
 function tick() {
   syncSchedule();
@@ -792,9 +874,12 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
         const job = beginAnnouncement('weather');
         if (!job) return false;
         try {
+          if (nativeTTSAvailable()) {
+            try { window.speechSynthesis.cancel(); } catch (_) {}
+          }
           const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
-          for (let i = 0; i < phrases.length; i++) {
-            if (!await speakText(phrases[i].trim(), job, i === 0)) return false;
+          for (const phrase of phrases) {
+            if (!stillValid() || !await speakText(phrase.trim(), job)) return false;
           }
           return true;
         }
@@ -818,9 +903,10 @@ if (window.RadioNews && typeof window.RadioNews.create === 'function') {
         const job = beginAnnouncement('news');
         if (!job) { if ($('news-status'))$('news-status').textContent = 'A leitura de notícias não está disponível neste dispositivo.'; return false; }
         try {
-          for (let i = 0; i < phrases.length; i++) {
-            if (!stillValid() || !await speakText(phrases[i], job, i === 0)) return false;
+          if (nativeTTSAvailable()) {
+            try { window.speechSynthesis.cancel(); } catch (_) {}
           }
+          for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
           return true;
         } finally { finishAnnouncement(job); }
       }
