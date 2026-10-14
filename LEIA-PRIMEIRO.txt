@@ -1,0 +1,11 @@
+LEIA PRIMEIRO — TELA APAGADA
+
+Extraia este ZIP. Envie app.js, index.html e sw.js para a raiz do repositório radio-transito-sp, substituindo os três arquivos. Não envie o ZIP diretamente. Não precisa enviar media nem artesp.
+
+Alteração: reutiliza o reprodutor ativo na troca de faixa com a tela apagada no celular. Tenta retomar uma pausa inesperada em segundo plano sem confundi-la com o botão Pausar.
+
+Preservados: músicas, podcasts, horários, fontes, voz e pausas dos boletins. A música continua pausada durante os avisos.
+
+Validação: 24 testes automatizados com reprodução simulada passaram. Não houve teste físico no Samsung. A correção não garante que o Android nunca suspenda o navegador.
+
+Teste após atualizar: deixe a tela apagada por duas músicas completas; verifique também um boletim e o botão Pausar da tela de bloqueio.

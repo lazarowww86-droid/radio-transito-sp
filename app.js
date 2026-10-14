@@ -213,7 +213,9 @@ function activate(index, reuse = null, seek = 0) {
   cancelAnnouncement();
   ++playSequence;
   pendingPlay = false;
-  const previous = current, target = reuse || (singleDeck ? current : standby);
+  // Em segundo plano, mantém o elemento já autorizado pelo toque do ouvinte.
+  const keepDeck = singleDeck || (isMobile && document.visibilityState === 'hidden');
+  const previous = current, target = reuse || (keepDeck ? current : standby);
   idx = wrap(index);
   if (target !== previous) {
     current = target;
@@ -350,6 +352,12 @@ for (const element of [current, standby]) {
   });
   element.addEventListener('pause', () => {
     if (element === current && element.paused && wanted && !announcement && !pendingPlay && !element.ended && element.readyState >= 2) {
+      if (isMobile && document.visibilityState === 'hidden') {
+        // Pausas explícitas passam por pauseProgram(), que já remove wanted.
+        // Uma pausa inesperada do navegador não deve apagar essa intenção.
+        failTrack(element);
+        return;
+      }
       wanted = false;
       controls();
       status('Programação pausada. Toque em Ouvir para continuar.');
