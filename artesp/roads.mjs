@@ -47,16 +47,17 @@ export function articleURL(html,source,now=Date.now()){
  }return null;
 }
 export function parseEco(html,source,url,now=Date.now()){
- if(new URL(url).origin!==new URL(source.url).origin)throw new Error('Origem inválida');
+ if(new URL(url).origin!==new URL(source.url).origin)throw sourceError('origin_rejected');
  const content=html.match(/<div\b[^>]*class="[^"]*html-content[^\"]*"[^>]*>([\s\S]*?)<\/div>/i)?.[1]||'';
  const date=dateBR(content),title=text(content.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i)?.[1]||'');
  const paragraphs=[...content.matchAll(/<p\b([^>]*)>([\s\S]*?)(?=<p\b|<\/p>|$)/gi)].filter(m=>!/(?:class\s*=\s*["']?date)/i.test(m[1])).map(m=>text(m[2])).filter(Boolean);
  if(!title||!paragraphs.length||!fresh(date,now))return [];
  return [item(source,title,paragraphs.join(' ').slice(0,420),date,url)];
 }
+function sourceError(code) { const error = new Error('Fonte indisponível'); error.sourceCode = code; return error; }
 export async function download(url){
  const original = new URL(url);
- if (!SOURCES.some(source => new URL(source.url).origin === original.origin) || original.protocol !== 'https:' || original.username || original.password) throw new Error('Origem inválida');
+ if (!SOURCES.some(source => new URL(source.url).origin === original.origin) || original.protocol !== 'https:' || original.username || original.password) throw sourceError('origin_rejected');
  const signal = AbortSignal.timeout(10000);
  let target = original.href, response;
  for (let redirects = 0; redirects <= 3; redirects++) {
@@ -64,20 +65,21 @@ export async function download(url){
   if (![301,302,303,307,308].includes(response.status)) break;
   const location = response.headers.get('Location');
   await response.body?.cancel().catch(() => {});
-  if (!location || redirects === 3) throw new Error('Redirecionamento inválido');
+  if (!location || redirects === 3) throw sourceError('redirect_rejected');
   const next = new URL(location, target);
-  if (next.protocol !== 'https:' || next.origin !== original.origin || next.username || next.password) throw new Error('Origem inválida');
+  if (next.protocol !== 'https:' || next.origin !== original.origin || next.username || next.password) throw sourceError('origin_rejected');
   target = next.href;
  }
- if(!response.ok)throw new Error('Fonte indisponível');
- const reader=response.body.getReader();let size=0,body='',decoder=new TextDecoder();try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2*1024*1024)throw new Error('Página excessiva');body+=decoder.decode(value,{stream:true});}return body+decoder.decode();}finally{await reader.cancel().catch(()=>{});}
+ if(!response.ok)throw sourceError('http_' + response.status);
+ const reader=response.body.getReader();let size=0,body='',decoder=new TextDecoder();try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2*1024*1024)throw sourceError('response_too_large');body+=decoder.decode(value,{stream:true});}return body+decoder.decode();}finally{await reader.cancel().catch(()=>{});}
 }
 export class RoadsGateway{
  constructor(storage,{fetchPage=download,now=()=>Date.now()}={}){this.storage=storage;this.fetchPage=fetchPage;this.now=now;this.pending=null;}
  async get(){if(this.pending)return this.pending;this.pending=this.load();try{return await this.pending;}finally{this.pending=null;}}
- async load(){const now=this.now(),cached=await this.storage.get('roads-public-v3');if(cached&&now-cached.checked<300000)return this.result(cached,now);
- const sources=await Promise.all(SOURCES.map(async source=>{try{const html=await this.fetchPage(source.url);let items;if(source.id==='artesp')items=parseArtesp(html,now);else{const url=articleURL(html,source,now);items=url?parseEco(await this.fetchPage(url),source,url,now):[];}return {...source,status:items.length?'ok':'no_recent',items};}catch(_){return {...source,status:'unavailable',items:[]};}}));
- const value={checked:now,sources};await this.storage.put('roads-public-v3',value);return this.result(value,now);}
+ async load(){const now=this.now(),cached=await this.storage.get('roads-public-v4');if(cached&&now-cached.checked<300000)return this.result(cached,now);
+ const sources=await Promise.all(SOURCES.map(async source=>{let stage='index';try{const html=await this.fetchPage(source.url);let items;if(source.id==='artesp')items=parseArtesp(html,now);else{const url=articleURL(html,source,now);stage='article';items=url?parseEco(await this.fetchPage(url),source,url,now):[];}return {...source,status:items.length?'ok':'no_recent',items};}catch(error){const code = typeof error?.sourceCode === 'string' ? error.sourceCode : /^(TimeoutError|AbortError)$/.test(error?.name || '') ? 'timeout' : 'connection_or_processing_failed';return {...source,status:'unavailable',diagnostic:{stage,code},items:[]};}}));
+ const value={checked:now,sources};await this.storage.put('roads-public-v4',value);return this.result(value,now);}
  result(value,now){const sources=value.sources.map(s=>{const items=s.items.filter(i=>fresh(i.published_at,now));return {...s,items,status:s.status==='ok'&&!items.length?'no_recent':s.status};});return {status:200,body:{checked_at:new Date(value.checked).toISOString(),sources:sources.map(({items,...s})=>s),items:sources.flatMap(s=>s.items)}};}
 }
+
 
