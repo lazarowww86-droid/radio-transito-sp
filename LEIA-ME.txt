@@ -1,4 +1,11 @@
-Enviar app.js, weather.js, index.html e sw.js à raiz do GitHub.
-Leitura manual usa previsão válida já carregada, iniciando a tentativa no toque. Se precisar atualizar dados, pede novo toque.
-Música pausa durante os avisos; programação, músicas, podcasts e vinhetas preservados.
-Falhas da voz agora mostram o código retornado pelo navegador. Não foi possível validar som no Samsung físico.
+RESTAURAÇÃO COMPLETA DO SITE ANTERIOR ÀS QUATRO VINHETAS NOVAS
+
+Origem: GitHub, commit c86991cbafcb01001ae1d5e3a517586246e0c568, 13/10/2026 às 17h44 (Brasília).
+
+Extraia o ZIP e envie todos os arquivos e a pasta media à raiz do repositório, substituindo os existentes. Não envie o ZIP fechado.
+Não apague a pasta media existente: este pacote contém apenas as quatro vinhetas antigas; as 56 músicas e os quatro podcasts já estão no repositório.
+O podcast dos Mamonas foi adicionado posteriormente e não integra a programação restaurada. O arquivo pode permanecer guardado em media.
+As quatro vinhetas Roger posteriores deixam de ser usadas.
+Player, voz, clima, notícias, interface, programação e manifesto foram recuperados da versão indicada. Só mudou a identificação do cache para o navegador carregar a restauração.
+Não requer alteração no Cloudflare.
+Não foi possível confirmar áudio em um Samsung físico. Esta é a versão anterior indicada pelo usuário, recuperada e conferida.
