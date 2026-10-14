@@ -1,4 +1,4 @@
-const BUILD = '20261014-r29-rodovias';
+const BUILD = '20261014-r33-fontes';
 const MEDIA_BUILD = '20261013-r2-light';
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);
@@ -92,4 +92,5 @@ self.addEventListener('fetch', event => {
     event.respondWith(serveShell(request));
   }
 });
+
 

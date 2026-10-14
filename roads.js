@@ -3,8 +3,8 @@
 const ENDPOINT = 'https://radio-transito-sp.lazarowww86.workers.dev/rodovias';
 const SOURCES = {
   artesp: ['ARTESP Tráfego', 'ccm.artesp.sp.gov.br'],
-  leste: ['Ecovias Leste Paulista', 'www.ecoviaslestepaulista.com.br'],
-  imigrantes: ['Ecovias Imigrantes', 'www.ecoviasimigrantes.com.br']
+  renovias: ['Renovias', 'renovias.com.br'],
+  'mobilidade-sampa': ['Mobilidade Sampa', 'mobilidadesampa.com.br']
 };
 const INTERVAL = 15 * 60000;
 function fresh(item) {
@@ -42,7 +42,7 @@ window.RadioRoads = { create(hooks) {
     for (const item of items) {
       const card = document.createElement('article'); card.className = 'roads-item';
       const source = document.createElement('small');
-      source.textContent = `${SOURCES[item.source_id][0]} • ${time(item)} (Brasília)`;
+      source.textContent = `${SOURCES[item.source_id][0]} • ${item.kind === 'news' ? 'Notícia publicada' : 'Painel atualizado'} em ${time(item)} (Brasília)`;
       const title = document.createElement('h3'); title.textContent = item.title;
       const summary = document.createElement('p'); summary.textContent = item.summary;
       const link = document.createElement('a'); link.href = item.url;
@@ -96,7 +96,8 @@ window.RadioRoads = { create(hooks) {
         const hour = new Date(item.published_at).toLocaleTimeString('pt-BR', {
           timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit'
         });
-        phrases.push(`Segundo ${SOURCES[item.source_id][0]}, às ${hour}. ${item.title}. ${item.summary}.`);
+        if (item.kind === 'news') phrases.push(`Notícia publicada por ${SOURCES[item.source_id][0]} às ${hour}. Manchete: ${item.title}. Consulte os detalhes e atualizações no link da fonte.`);
+        else phrases.push(`Segundo ${SOURCES[item.source_id][0]}, às ${hour}. ${item.title}. ${item.summary}.`);
       }
       const ok = await hooks.announce(phrases, stillValid);
       if (ok && stillValid()) {
@@ -130,3 +131,4 @@ window.RadioRoads = { create(hooks) {
   return { load, announce, tick, destroy: () => timers.forEach(clearInterval) };
 } };
 })();
+
