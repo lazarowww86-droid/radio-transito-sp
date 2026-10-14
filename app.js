@@ -17,11 +17,11 @@ const programming = window.RadioProgramming.create(
 );
 
 // O estado do botão representa a intenção do ouvinte, inclusive durante avisos.
-const BUILD = '20261013-r2-light';
+const BUILD = '20261014-r20';
 let current = $('audio'), standby = $('audio-next');
 const bulletinAudio = $('bulletin-audio');
 let idx = 0, wanted = false, announcement = null, playSequence = 0;
-let pendingPlay = false, singleDeck = false, unlocked = false;
+let pendingPlay = false, singleDeck = false, unlocked = false, ttsPrimed = false;
 let failureTimer = null, lastProgress = Date.now(), lastPosition = -1;
 const failedSources = new Set();
 const mediaCache = new Map(), preloads = new Map();
@@ -46,7 +46,8 @@ function fmt(t) {
 function progress() {
   const duration = current.duration, time = current.currentTime || 0;
   $('elapsed').textContent = fmt(time);
-  $('duration').textContent = fmt(duration);$('progress').style.width = (Number.isFinite(duration) && duration > 0 ? Math.min(100, time / duration * 100) : 0) + '%';
+  $('duration').textContent = fmt(duration);
+  $('progress').style.width = (Number.isFinite(duration) && duration > 0 ? Math.min(100, time / duration * 100) : 0) + '%';
 }
 
 function trackInfo() {
@@ -59,7 +60,7 @@ function trackInfo() {
     navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist, album: 'Rádio Trânsito SP' });
   }
   const daily = programming.daily();
-  if ($('daily-podcast'))$('daily-podcast').textContent = playlist[daily.index].title;
+  if ($('daily-podcast')) $('daily-podcast').textContent = playlist[daily.index].title;
   progress();
 }
 
@@ -96,30 +97,37 @@ function warmMedia(src) {
     .then(blob => {
       if (!blob.size) return;
       mediaCache.set(src, URL.createObjectURL(blob));
-      // Não recarrega um elemento que já esteja pronto ou em reprodução.
       if (standby.dataset.source === src && standby.paused && standby.readyState < 3) {
         prepare(standby, Number(standby.dataset.index), true);
       }
     })
-    .catch(() => {}) // A reprodução direta continua disponível se o pré-carregamento falhar.
+    .catch(() => {})
     .finally(() => { clearTimeout(timeout); preloads.delete(src); });
   preloads.set(src, task);
 }
 
 function unlockAuxiliaryAudio() {
-  if (unlocked) return;
-  unlocked = true;
-  // Safari concede permissão por elemento. Estes elementos são liberados no clique.
-  for (const element of [standby, bulletinAudio]) {
-    element.muted = true;
-    const attempt = element.play();
-    if (attempt) attempt.then(() => {
-      if (element !== current && !(element === bulletinAudio && announcement)) {
-        element.pause();
-        element.currentTime = 0;
-      }
-      element.muted = false;
-    }).catch(() => { element.muted = false; });
+  if (!unlocked) {
+    unlocked = true;
+    for (const element of [standby, bulletinAudio]) {
+      element.muted = true;
+      const attempt = element.play();
+      if (attempt) attempt.then(() => {
+        if (element !== current && !(element === bulletinAudio && announcement)) {
+          element.pause();
+          element.currentTime = 0;
+        }
+        element.muted = false;
+      }).catch(() => { element.muted = false; });
+    }
+  }
+  // Aquece a lista de vozes do Android sem cancelar falas em andamento
+  if (canSpeak() && !ttsPrimed) {
+    ttsPrimed = true;
+    try {
+      window.speechSynthesis.getVoices();
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+    } catch (_) {}
   }
 }
 
@@ -132,7 +140,6 @@ function playCurrent(fallbackElement = null) {
   lastPosition = element.currentTime;
   controls();
   status('Carregando o áudio…');
-  // play() é chamado diretamente no clique, sem esperar fetch ou metadados.
   const attempt = element.play();
   Promise.resolve(attempt).then(() => {
     if (sequence !== playSequence || element !== current || !wanted || announcement) return;
@@ -144,7 +151,6 @@ function playCurrent(fallbackElement = null) {
     pendingPlay = false;
     if (error.name === 'NotAllowedError') {
       if (fallbackElement && fallbackElement !== current) {
-        // Navegadores que bloqueiam o segundo elemento reutilizam o já autorizado.
         singleDeck = true;
         activate(idx, fallbackElement, Number(current.dataset.startOffset || 0));
         return;
@@ -231,7 +237,8 @@ $('play').addEventListener('click', () => {
   if (wanted || announcement) pauseProgram();
   else startProgram();
 });
-$('next').addEventListener('click', advanceProgram);$('prev').addEventListener('click', previousProgram);
+$('next').addEventListener('click', advanceProgram);
+$('prev').addEventListener('click', previousProgram);
 
 for (const element of [current, standby]) {
   element.addEventListener('ended', () => {
@@ -247,7 +254,7 @@ for (const element of [current, standby]) {
   });
   element.addEventListener('pause', () => {
     if (element === current && element.paused && wanted && !announcement && !pendingPlay && !element.ended && element.readyState >= 2) {
-      wanted = false; // Pausa solicitada pelo sistema ou por controles externos.
+      wanted = false;
       controls();
       status('Programação pausada. Toque em Ouvir para continuar.');
     }
@@ -272,56 +279,74 @@ for (const element of [current, standby]) {
   });
 }
 
-// Um download defeituoso não deixa a rádio presa indefinidamente.
 setInterval(() => {
   if (wanted && !announcement && Date.now() - lastProgress > 12000) failTrack(current);
 }, 1000);
 
-// Avisos pausam o elemento atual e o retomam sem recarregar o podcast.
+// --- SISTEMA DE VOZ (TTS) COMPATÍVEL COM ANDROID E PC ---
 function canSpeak() {
   return 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
 }
 
+const isAndroid = /Android/i.test(navigator.userAgent || '');
+
 let weatherVoiceName = '';
 try { weatherVoiceName = localStorage.getItem('radio_weather_voice') || ''; } catch (_) {}
+
 function portugueseVoices() {
-  return canSpeak() ? window.speechSynthesis.getVoices().filter(v => v.lang.replace('_', '-').toLowerCase() === 'pt-br') : [];
+  if (!canSpeak()) return [];
+  const all = window.speechSynthesis.getVoices() || [];
+  return all.filter(v => {
+    const lang = (v.lang || '').replace('_', '-').toLowerCase();
+    return lang.startsWith('pt-br') || lang === 'pt' || /portugu[eê]s|brasil|brazil/i.test(v.name || '');
+  });
 }
+
 function preferredWeatherVoice(voices) {
   const male = v => /Ant[oô]nio|Daniel|Felipe|Ricardo|Bruno|Fabr[ií]cio|Thiago|Paulo|Alex/i.test(v.name);
   return voices.find(v => male(v) && /Natural|Neural/i.test(v.name)) || voices.find(male) ||
     voices.find(v => /Natural|Neural/i.test(v.name)) || voices.find(v => !/Google/i.test(v.name)) || voices[0];
 }
+
 function selectedVoice(kind) {
   const voices = portugueseVoices();
   if (kind !== 'weather') return voices[0];
   return voices.find(v => v.name === weatherVoiceName) || preferredWeatherVoice(voices);
 }
+
 function paintVoices() {
   const selector = $('weather-voice');
   if (!selector || !canSpeak()) return;
   const voices = portugueseVoices(), preferred = preferredWeatherVoice(voices);
   selector.replaceChildren();
   const automatic = document.createElement('option');
-  automatic.value = ''; automatic.textContent = preferred ? `Automática — ${preferred.name}` : 'Voz padrão do dispositivo';
+  automatic.value = '';
+  automatic.textContent = preferred ? `Automática — ${preferred.name}` : 'Voz padrão do dispositivo';
   selector.append(automatic);
   for (const voice of voices) {
-    const option = document.createElement('option'); option.value = voice.name; option.textContent = voice.name; selector.append(option);
+    const option = document.createElement('option');
+    option.value = voice.name;
+    option.textContent = voice.name;
+    selector.append(option);
   }
   selector.value = voices.some(v => v.name === weatherVoiceName) ? weatherVoiceName : '';
 }
-if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => {
+
+if ($('weather-voice')) {
+  $('weather-voice').addEventListener('change', event => {
     weatherVoiceName = event.target.value;
     try { localStorage.setItem('radio_weather_voice', weatherVoiceName); } catch (_) {}
   });
   if (canSpeak()) {
+    try { window.speechSynthesis.onvoiceschanged = paintVoices; } catch (_) {}
     window.speechSynthesis.addEventListener?.('voiceschanged', paintVoices);
     paintVoices();
   }
 }
 
 function beginAnnouncement(kind) {
-  if (announcement || !canSpeak()) return null;
+  if (!canSpeak()) return null;
+  if (announcement) return null;
   const job = { kind, cancelled: false, cleanups: new Set() };
   announcement = job;
   ++playSequence;
@@ -339,7 +364,9 @@ function cancelAnnouncement() {
   job.cancelled = true;
   for (const cleanup of [...job.cleanups]) cleanup();
   bulletinAudio.pause();
-  if (canSpeak()) window.speechSynthesis.cancel();
+  if (canSpeak()) {
+    try { window.speechSynthesis.cancel(); } catch (_) {}
+  }
 }
 
 function finishAnnouncement(job) {
@@ -385,47 +412,89 @@ function playSting(src, job) {
   });
 }
 
-function speakText(text, job) {
+function speakText(text, job, isFirstPhrase = true) {
+  const clean = typeof text === 'string' ? text.trim() : '';
+  if (!clean) return Promise.resolve(true);
   if (job.cancelled || announcement !== job || !canSpeak()) return Promise.resolve(false);
+
   return new Promise(resolve => {
-    const synth = window.speechSynthesis, utterance = new SpeechSynthesisUtterance(text);
-    let settled = false, started = false, timer, poll;
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(clean);
+    let settled = false, started = false, timer, poll, speakDelay;
+
     const finish = ok => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearTimeout(speakDelay);
       clearInterval(poll);
       utterance.onstart = utterance.onend = utterance.onerror = null;
       job.cleanups.delete(cancel);
-      if (!ok) synth.cancel();
+      if (!ok) {
+        try { synth.cancel(); } catch (_) {}
+      }
       resolve(ok);
     };
+
     const cancel = () => finish(false);
     job.cleanups.add(cancel);
-    job.utterance = utterance; // Mantém a referência até a fala terminar.
+    job.utterance = utterance;
+
     utterance.lang = 'pt-BR';
     utterance.rate = 1;
-    const voice = selectedVoice(job.kind);
-    if (voice) utterance.voice = voice;
-    utterance.onstart = () => {
+
+    // No Android (S24 Ultra), atribuir utterance.voice automaticamente pode travar o motor
+    // caso a voz do sistema ainda esteja inicializando. Só atribuímos no PC ou se o usuário escolheu manualmente.
+    if (!isAndroid || (job.kind === 'weather' && weatherVoiceName)) {
+      const voice = selectedVoice(job.kind);
+      if (voice) utterance.voice = voice;
+    }
+
+    const markStarted = () => {
+      if (started) return;
       started = true;
       clearTimeout(timer);
-      timer = setTimeout(cancel, Math.min(180000, Math.max(15000, text.length / 8 * 1000 + 5000)));
+      timer = setTimeout(cancel, Math.min(180000, Math.max(20000, clean.length / 7 * 1000 + 8000)));
     };
+
+    utterance.onstart = markStarted;
     utterance.onend = () => finish(true);
-    utterance.onerror = cancel;
-    // Algumas implementações deixam de emitir onend. O estado do sintetizador é a reserva.
-    poll = setInterval(() => { if (started && !synth.speaking && !synth.pending) finish(true); }, 500);
-    timer = setTimeout(cancel, 3000);
+    utterance.onerror = event => {
+      if (event && (event.error === 'interrupted' || event.error === 'canceled')) {
+        if (started) { finish(true); return; }
+      }
+      cancel();
+    };
+
+    poll = setInterval(() => {
+      if (synth.speaking) markStarted();
+      else if (started && !synth.pending) finish(true);
+    }, 250);
+
+    // Tempo de espera de 8s para permitir que o motor TTS do Android acorde (cold start)
+    timer = setTimeout(cancel, 8000);
+
     try {
-      synth.cancel();
-      synth.resume();
-      synth.speak(utterance);
-    } catch (_) { cancel(); }
+      if (isFirstPhrase && (synth.speaking || synth.pending)) {
+        synth.cancel();
+        speakDelay = setTimeout(() => {
+          if (settled || job.cancelled || announcement !== job) return;
+          try {
+            if (synth.paused) synth.resume();
+            synth.speak(utterance);
+          } catch (_) { cancel(); }
+        }, 60);
+      } else {
+        if (synth.paused) synth.resume();
+        synth.speak(utterance);
+      }
+    } catch (_) {
+      cancel();
+    }
   });
 }
 
-// Dicionário de rodovias da ARTESP para converter códigos técnicos (ex: 0021SP, SPD 006/021) em nomes claros.
+// Dicionário de rodovias da ARTESP para converter códigos técnicos em nomes claros.
 const RODOVIAS_ARTESP = {
   '015': 'Marginal Tietê / Pinheiros (SP-015)',
   '021': 'Rodoanel Mário Covas (SP-021)',
@@ -500,7 +569,6 @@ function formatTrafficItem(raw) {
   if (typeof raw !== 'string') return '';
   let text = raw.trim();
 
-  // 1. Reconhece acessos, dispositivos e interligações como "SPD 006/021", "SPA 006/021", "SPI 006/021", "006/021SP"
   text = text.replace(
     /\b(?:rodovia\s+)?(?:(sp[daic]|acesso|dispositivo|interliga[cç][aã]o)[\s\-:/]*)?0*(\d{1,4})\s*\/+\s*0*(\d{2,3})(?:[\s\-/]*sp)?\b/gi,
     (_, prefix, branchDigits, mainDigits) => {
@@ -513,24 +581,19 @@ function formatTrafficItem(raw) {
     }
   );
 
-  // 2. Substitui códigos como "Rodovia 0021SP", "0021SP", "SP-021" pelo nome conhecido da via
   text = text.replace(/\b(?:rodovia\s+)?(?:sp[\s\-/]*)?0*(\d{2,3})[\s\-/]*sp\b/gi, (_, digits) => {
     return nomeDaRodovia(digits);
   });
 
-  // 3. Caso venha como "Rodovia SP 0021" ou "Rodovia SPD 021" (sem alterar o que já está entre parênteses)
   text = text.replace(/\brodovia\s+sp[daic]?[\s\-/]*0*(\d{2,3})\b/gi, (_, digits) => {
     return nomeDaRodovia(digits);
   });
 
-  // 4. Converte "sentido não se aplica", "sentido N/A", etc. para "sentido não informado",
-  // mantendo a informação clara para o ouvinte de que o sentido não foi informado.
   text = text.replace(
     /\b(?:no\s+|em\s+)?sentido\s+(?:n[aã]o\s+se\s+aplica|n\/a|n\.a\.|n[aã]o\s+informado|indefinido|nenhum|-)\b/gi,
     'sentido não informado'
   );
 
-  // 5. Expande siglas de sentido isoladas caso existam (ex: "sentido L", "sentido Cap")
   const sentidos = {
     'n': 'Norte', 's': 'Sul', 'l': 'Leste', 'o': 'Oeste', 'w': 'Oeste',
     'cap': 'Capital', 'int': 'Interior', 'lit': 'Litoral',
@@ -541,7 +604,6 @@ function formatTrafficItem(raw) {
     return expandido === 'ambos os sentidos' ? 'em ambos os sentidos' : `sentido ${expandido}`;
   });
 
-  // 6. Limpa pontuações ou espaços duplicados
   text = text
     .replace(/\s+,/g, ',')
     .replace(/,{2,}/g, ',')
@@ -555,7 +617,6 @@ function formatTrafficItem(raw) {
 }
 
 function prepareTrafficSpeech(text) {
-  // Ajusta siglas e números para que o sintetizador de voz leia com clareza
   return text
     .replace(/\(SP-0*(\d+)\)/gi, ', S P $1,')
     .replace(/\(BR-0*(\d+)\)/gi, ', B R $1,')
@@ -595,7 +656,8 @@ function report() {
     $('traffic').textContent = 'A fonte não apresenta atualização recente.';
   } else {
     const label = official ? timestampKind === 'resposta_oficial_http' ? 'Resposta oficial da ARTESP: ' : 'Consulta oficial da ARTESP: ' : 'Atualizado: ';
-    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });$('traffic').textContent = items.slice(0, 6).join(' • ');
+    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    $('traffic').textContent = items.slice(0, 6).join(' • ');
   }
 }
 
@@ -637,8 +699,10 @@ async function refresh() {
 }
 
 async function trafficBulletin() {
+  unlockAuxiliaryAudio();
   if (!feedFresh()) { report(); return; }
   const text = prepareTrafficSpeech(items.slice(0, 6).join('. '));
+  if (announcement) cancelAnnouncement();
   const job = beginAnnouncement('traffic');
   if (!job) {
     if (!canSpeak()) $('traffic-status').textContent = 'A leitura por voz não está disponível neste navegador.';
@@ -646,12 +710,13 @@ async function trafficBulletin() {
   }
   try {
     await playSting('media/vinheta-transito-mix.mp3', job);
-    const spoken = await speakText(text, job);
+    const spoken = await speakText(text, job, true);
     if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
   } finally { finishAnnouncement(job); }
 }
 
-$('speak').addEventListener('click', trafficBulletin);$('refresh').addEventListener('click', refresh);
+$('speak').addEventListener('click', trafficBulletin);
+$('refresh').addEventListener('click', refresh);
 refresh();
 setInterval(async () => {
   const fresh = await refresh();
@@ -682,7 +747,7 @@ function checkTimeAnnouncement() {
   const job = beginAnnouncement('time');
   if (!job) return;
   lastTimeSlot = slot;
-  speakText(timeText(parts), job).finally(() => finishAnnouncement(job));
+  speakText(timeText(parts), job, true).finally(() => finishAnnouncement(job));
 }
 function tick() {
   syncSchedule();
@@ -694,7 +759,7 @@ setInterval(tick, 1000);
 setInterval(checkTimeAnnouncement, 5000);
 
 if ('mediaSession' in navigator) {
-  for (const [action, handler] of Object.entries({ play: startProgram, pause: pauseProgram, nexttrack: advanceProgram, previoustrack: previousProgram })) {
+  for (const [action, handler] of Object.entries({ play: startProgram, pause: pauseProgram, nexttrack: advanceProgram, previstrack: previousProgram, previoustrack: previousProgram })) {
     try { navigator.mediaSession.setActionHandler(action, handler); } catch (_) {}
   }
 }
@@ -731,16 +796,16 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
     window.RadioWeather.create({
       isListening: () => wanted,
       unlockVoice: unlockAuxiliaryAudio,
-      canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
+      canAnnounce: manual => (!announcement || manual) && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
       announce: async (text, snapshot, stillValid = () => true) => {
-        if (!stillValid() || announcement || pendingPlay) return false;
+        if (!stillValid() || pendingPlay) return false;
+        if (announcement) cancelAnnouncement();
         const job = beginAnnouncement('weather');
         if (!job) return false;
         try {
-          // Frases curtas mantêm os limites de espera da voz pequenos.
-          const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
-          for (const phrase of phrases) {
-            if (!await speakText(phrase.trim(), job)) return false;
+          const phrases = (text.match(/[^.!?]+[.!?]?/g) || [text]).map(p => p.trim()).filter(Boolean);
+          for (let i = 0; i < phrases.length; i++) {
+            if (!await speakText(phrases[i], job, i === 0)) return false;
           }
           return true;
         }
@@ -758,23 +823,26 @@ if (window.RadioNews && typeof window.RadioNews.create === 'function') {
     window.RadioNews.create({
       isListening: () => wanted,
       unlockVoice: unlockAuxiliaryAudio,
-      canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
+      canAnnounce: manual => (!announcement || manual) && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
       announce: async (phrases, stillValid = () => true) => {
-        if (!stillValid() || announcement || pendingPlay) return false;
+        if (!stillValid() || pendingPlay) return false;
+        if (announcement) cancelAnnouncement();
         const job = beginAnnouncement('news');
-        if (!job) { if ($('news-status')) $('news-status').textContent = 'A leitura de notícias não está disponível neste dispositivo.'; return false; }
+        if (!job) { if ($('news-status'))$('news-status').textContent = 'A leitura de notícias não está disponível neste dispositivo.'; return false; }
         try {
-          for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
+          const validPhrases = phrases.map(p => (p || '').trim()).filter(Boolean);
+          for (let i = 0; i < validPhrases.length; i++) {
+            if (!stillValid() || !await speakText(validPhrases[i], job, i === 0)) return false;
+          }
           return true;
         } finally { finishAnnouncement(job); }
       }
     });
-  } catch (_) { if ($('news-status')) $('news-status').textContent = 'Notícias temporariamente indisponíveis.'; }
+  } catch (_) { if ($('news-status'))$('news-status').textContent = 'Notícias temporariamente indisponíveis.'; }
 }
 
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // Os primeiros downloads podem terminar antes de o novo worker assumir a página.
     for (const src of mediaCache.keys()) fetch(mediaURL(src), { cache: 'force-cache' }).catch(() => {});
   });
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(registration => {
