@@ -93,7 +93,7 @@ function text(snapshot, now = Date.now()) {
 
 function create(hooks) {
   const $ = id => document.getElementById(id);
-  if (!$('weather-status') || !$('weather-speak') || !$('weather-refresh')) throw new Error('Painel de previsão ausente');
+  if (!$('weather-status') || !$('weather-speak') \vert{}\vert{} !$('weather-refresh')) throw new Error('Painel de previsão ausente');
   let snapshot = null, inFlight = null, bulletinRunning = false, nextAt = null, interaction = 0;
   let lastError = false, lastPaint = '';
   const timers = [];
@@ -161,14 +161,25 @@ function create(hooks) {
     bulletinRunning = true;
     buttons(true);
     try {
-      const loaded = await refresh(); // A programação continua durante toda a consulta.
+      // Se for clique manual e os dados já estiverem frescos na tela, fala imediatamente
+      // sem esperar novo fetch(), preservando o User Gesture de áudio nos celulares!
+      let loaded = fresh(snapshot);
+      if (!loaded || !manual) {
+        loaded = await refresh();
+      }
       if (revision !== interaction || (wasListening && !hooks.isListening())) return;
       if (!loaded || !fresh(snapshot)) { if (!manual) nextAt = Date.now() + RETRY; return; }
       if (!hooks.canAnnounce(manual)) { if (!manual) nextAt = Date.now() + 5000; return; }
+      if (manual) message('Lendo o boletim de previsão do tempo…');
       const said = await hooks.announce(text(snapshot), snapshot, () => revision === interaction && (!wasListening || hooks.isListening()) && fresh(snapshot));
       if (revision !== interaction) return;
       nextAt = Date.now() + (said ? INTERVAL : RETRY);
-      if (!said) message('A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
+      if (said) {
+        lastPaint = '';
+        paint();
+      } else {
+        message('A leitura por voz não está disponível no momento. Consulte a previsão no painel.');
+      }
     } catch (_) {
       if (revision === interaction) message('Não foi possível ler o boletim. Consulte a previsão no painel.');
       if (!manual) nextAt = Date.now() + RETRY;
@@ -181,8 +192,7 @@ function create(hooks) {
     if (Date.now() >= nextAt && !bulletinRunning && hooks.canAnnounce(false)) bulletin(false);
   }
   function cancelPending() { interaction++; }
-  for (const id of ['play', 'next', 'prev']) $(id)?.addEventListener('click', cancelPending);
-  $('weather-speak').addEventListener('click', () => { hooks.unlockVoice?.(); bulletin(true); });
+  for (const id of ['play', 'next', 'prev']) $(id)?.addEventListener('click', cancelPending);$('weather-speak').addEventListener('click', () => { hooks.unlockVoice?.(); bulletin(true); });
   $('weather-refresh').addEventListener('click', refresh);
   timers.push(setInterval(refresh, INTERVAL), setInterval(schedule, 1000));
   refresh();
