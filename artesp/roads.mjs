@@ -42,15 +42,29 @@ export function parseEco(html,source,url,now=Date.now()){
  if(!title||!paragraphs.length||!fresh(date,now))return [];
  return [item(source,title,paragraphs.join(' ').slice(0,420),date,url)];
 }
-async function download(url){
- const response=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(10000),headers:{Accept:'text/html'}});if(!response.ok)throw new Error('Fonte indisponível');
+export async function download(url){
+ const original = new URL(url);
+ if (!SOURCES.some(source => new URL(source.url).origin === original.origin) || original.protocol !== 'https:' || original.username || original.password) throw new Error('Origem inválida');
+ const signal = AbortSignal.timeout(10000);
+ let target = original.href, response;
+ for (let redirects = 0; redirects <= 3; redirects++) {
+  response = await fetch(target, {redirect:'manual',signal,headers:{Accept:'text/html','User-Agent':'RadioTransitoSP/1.0'}});
+  if (![301,302,303,307,308].includes(response.status)) break;
+  const location = response.headers.get('Location');
+  await response.body?.cancel().catch(() => {});
+  if (!location || redirects === 3) throw new Error('Redirecionamento inválido');
+  const next = new URL(location, target);
+  if (next.protocol !== 'https:' || next.origin !== original.origin || next.username || next.password) throw new Error('Origem inválida');
+  target = next.href;
+ }
+ if(!response.ok)throw new Error('Fonte indisponível');
  const reader=response.body.getReader();let size=0,body='',decoder=new TextDecoder();try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2*1024*1024)throw new Error('Página excessiva');body+=decoder.decode(value,{stream:true});}return body+decoder.decode();}finally{await reader.cancel().catch(()=>{});}
 }
 export class RoadsGateway{
  constructor(storage,{fetchPage=download,now=()=>Date.now()}={}){this.storage=storage;this.fetchPage=fetchPage;this.now=now;this.pending=null;}
  async get(){if(this.pending)return this.pending;this.pending=this.load();try{return await this.pending;}finally{this.pending=null;}}
- async load(){const now=this.now(),cached=await this.storage.get('roads-public-v1');if(cached&&now-cached.checked<300000)return this.result(cached,now);
+ async load(){const now=this.now(),cached=await this.storage.get('roads-public-v2');if(cached&&now-cached.checked<300000)return this.result(cached,now);
  const sources=await Promise.all(SOURCES.map(async source=>{try{const html=await this.fetchPage(source.url);let items;if(source.id==='artesp')items=parseArtesp(html,now);else{const url=articleURL(html,source,now);items=url?parseEco(await this.fetchPage(url),source,url,now):[];}return {...source,status:items.length?'ok':'no_recent',items};}catch(_){return {...source,status:'unavailable',items:[]};}}));
- const value={checked:now,sources};await this.storage.put('roads-public-v1',value);return this.result(value,now);}
+ const value={checked:now,sources};await this.storage.put('roads-public-v2',value);return this.result(value,now);}
  result(value,now){const sources=value.sources.map(s=>{const items=s.items.filter(i=>fresh(i.published_at,now));return {...s,items,status:s.status==='ok'&&!items.length?'no_recent':s.status};});return {status:200,body:{checked_at:new Date(value.checked).toISOString(),sources:sources.map(({items,...s})=>s),items:sources.flatMap(s=>s.items)}};}
 }
