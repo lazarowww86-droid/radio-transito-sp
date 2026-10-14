@@ -17,7 +17,8 @@ const programming = window.RadioProgramming.create(
 );
 
 // O estado do botão representa a intenção do ouvinte, inclusive durante avisos.
-const BUILD = '20261014-r20';
+// Mantido igual ao MEDIA_BUILD do sw.js para preservar o cache de MP3.
+const BUILD = '20261013-r2-light';
 let current = $('audio'), standby = $('audio-next');
 const bulletinAudio = $('bulletin-audio');
 let idx = 0, wanted = false, announcement = null, playSequence = 0;
@@ -332,8 +333,7 @@ function paintVoices() {
   selector.value = voices.some(v => v.name === weatherVoiceName) ? weatherVoiceName : '';
 }
 
-if ($('weather-voice')) {
-  $('weather-voice').addEventListener('change', event => {
+if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => {
     weatherVoiceName = event.target.value;
     try { localStorage.setItem('radio_weather_voice', weatherVoiceName); } catch (_) {}
   });
@@ -443,8 +443,6 @@ function speakText(text, job, isFirstPhrase = true) {
     utterance.lang = 'pt-BR';
     utterance.rate = 1;
 
-    // No Android (S24 Ultra), atribuir utterance.voice automaticamente pode travar o motor
-    // caso a voz do sistema ainda esteja inicializando. Só atribuímos no PC ou se o usuário escolheu manualmente.
     if (!isAndroid || (job.kind === 'weather' && weatherVoiceName)) {
       const voice = selectedVoice(job.kind);
       if (voice) utterance.voice = voice;
@@ -471,7 +469,6 @@ function speakText(text, job, isFirstPhrase = true) {
       else if (started && !synth.pending) finish(true);
     }, 250);
 
-    // Tempo de espera de 8s para permitir que o motor TTS do Android acorde (cold start)
     timer = setTimeout(cancel, 8000);
 
     try {
@@ -656,8 +653,7 @@ function report() {
     $('traffic').textContent = 'A fonte não apresenta atualização recente.';
   } else {
     const label = official ? timestampKind === 'resposta_oficial_http' ? 'Resposta oficial da ARTESP: ' : 'Consulta oficial da ARTESP: ' : 'Atualizado: ';
-    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    $('traffic').textContent = items.slice(0, 6).join(' • ');
+    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });$('traffic').textContent = items.slice(0, 6).join(' • ');
   }
 }
 
@@ -715,8 +711,7 @@ async function trafficBulletin() {
   } finally { finishAnnouncement(job); }
 }
 
-$('speak').addEventListener('click', trafficBulletin);
-$('refresh').addEventListener('click', refresh);
+$('speak').addEventListener('click', trafficBulletin);$('refresh').addEventListener('click', refresh);
 refresh();
 setInterval(async () => {
   const fresh = await refresh();
@@ -759,7 +754,7 @@ setInterval(tick, 1000);
 setInterval(checkTimeAnnouncement, 5000);
 
 if ('mediaSession' in navigator) {
-  for (const [action, handler] of Object.entries({ play: startProgram, pause: pauseProgram, nexttrack: advanceProgram, previstrack: previousProgram, previoustrack: previousProgram })) {
+  for (const [action, handler] of Object.entries({ play: startProgram, pause: pauseProgram, nexttrack: advanceProgram, previoustrack: previousProgram })) {
     try { navigator.mediaSession.setActionHandler(action, handler); } catch (_) {}
   }
 }
