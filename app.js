@@ -2,10 +2,11 @@
 'use strict';
 const $ = id => document.getElementById(id);
 
-// Cache rápido em memória para evitar que o await refresh() do weather.js atrase o clique no celular
+// Cache rápido em memória (2 min) para que o clique no telemóvel não espere pela rede antes de falar
 if (typeof window.fetch === 'function') {
   const nativeFetch = window.fetch.bind(window);
   let lastWeatherBody = null, lastWeatherTime = 0;
+  let lastNewsBody = null, lastNewsTime = 0;
   window.fetch = async function(input, init) {
     const url = typeof input === 'string' ? input : (input && input.url) || '';
     if (url.includes('api.open-meteo.com/v1/forecast')) {
@@ -14,10 +15,17 @@ if (typeof window.fetch === 'function') {
       }
       const res = await nativeFetch(input, init);
       if (res.ok) {
-        try {
-          lastWeatherBody = await res.clone().text();
-          lastWeatherTime = Date.now();
-        } catch (_) {}
+        try { lastWeatherBody = await res.clone().text(); lastWeatherTime = Date.now(); } catch (_) {}
+      }
+      return res;
+    }
+    if (url.includes('/noticias')) {
+      if (lastNewsBody && Date.now() - lastNewsTime < 120000) {
+        return new Response(lastNewsBody, { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      const res = await nativeFetch(input, init);
+      if (res.ok) {
+        try { lastNewsBody = await res.clone().text(); lastNewsTime = Date.now(); } catch (_) {}
       }
       return res;
     }
@@ -431,7 +439,7 @@ function playSting(src, job) {
   });
 }
 
-function splitIntoChunks(text, maxLen = 170) {
+function splitIntoChunks(text, maxLen = 165) {
   const sentences = text.match(/[^.!?]+[.!?]?/g) || [text];
   const chunks = [];
   for (const s of sentences) {
@@ -451,12 +459,12 @@ function splitIntoChunks(text, maxLen = 170) {
   return chunks;
 }
 
-// Reproduz a voz pelo elemento <audio id="bulletin-audio"> caso o speechSynthesis do celular não responda
+// Reproduz a voz pelo elemento <audio id="bulletin-audio"> com no-referrer (evita bloqueio 403 no telemóvel)
 async function speakViaAudioFallback(text, job) {
-  const chunks = splitIntoChunks(text, 170);
+  const chunks = splitIntoChunks(text, 165);
   const endpoints = [
-    q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=${encodeURIComponent(q)}`,
-    q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=pt-BR&q=${encodeURIComponent(q)}`
+    q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=pt-BR&q=${encodeURIComponent(q)}`,
+    q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=${encodeURIComponent(q)}`
   ];
   for (const chunk of chunks) {
     if (job.cancelled || announcement !== job) return false;
@@ -482,8 +490,10 @@ async function speakViaAudioFallback(text, job) {
           clearTimeout(timer);
           timer = setTimeout(cancel, 25000);
         };
-        timer = setTimeout(cancel, 5000);
+        timer = setTimeout(cancel, 6000);
         bulletinAudio.muted = false;
+        bulletinAudio.referrerPolicy = 'no-referrer';
+        bulletinAudio.setAttribute('referrerpolicy', 'no-referrer');
         bulletinAudio.removeAttribute('crossorigin');
         bulletinAudio.src = makeUrl(chunk);
         bulletinAudio.load();
@@ -547,11 +557,19 @@ function speakNative(clean, job) {
       if (synth.speaking) markStarted();
       else if (started && !synth.pending) finish(true);
     }, 200);
-    // Aguarda 2 segundos para a voz nativa do aparelho iniciar; se não iniciar (como no celular), cai para o fallback de áudio
-    timer = setTimeout(cancel, 2000);
+
+    // No PC aguarda 3s (original). No telemóvel aguarda 2,5s; se a voz nativa não arrancar, passa para o áudio
+    timer = setTimeout(cancel, isMobile ? 2500 : 3000);
     try {
-      if (synth.paused) synth.resume();
-      synth.speak(utterance);
+      if (!isMobile) {
+        synth.cancel();
+        synth.resume();
+        synth.speak(utterance);
+      } else {
+        // No Android, NUNCA chamar synth.cancel() colado ao synth.speak(), pois aborta a fala!
+        if (synth.paused) synth.resume();
+        synth.speak(utterance);
+      }
     } catch (_) { cancel(); }
   });
 }
@@ -782,9 +800,15 @@ async function trafficBulletin() {
     return;
   }
   try {
-    await playSting('media/vinheta-transito-mix.mp3', job);
-    const spoken = await speakText(text, job);
-    if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
+    if (!isMobile) {
+      await playSting('media/vinheta-transito-mix.mp3', job);
+      const spoken = await speakText(text, job);
+      if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
+    } else {
+      // No telemóvel, chama a voz imediatamente no clique para não perder a permissão de áudio durante a vinheta
+      const spoken = await speakText(text, job);
+      if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
+    }
   } finally { finishAnnouncement(job); }
 }
 
@@ -874,14 +898,15 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
         const job = beginAnnouncement('weather');
         if (!job) return false;
         try {
-          if (nativeTTSAvailable()) {
-            try { window.speechSynthesis.cancel(); } catch (_) {}
+          if (!isMobile) {
+            const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
+            for (const phrase of phrases) {
+              if (!stillValid() || !await speakText(phrase.trim(), job)) return false;
+            }
+            return true;
           }
-          const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
-          for (const phrase of phrases) {
-            if (!stillValid() || !await speakText(phrase.trim(), job)) return false;
-          }
-          return true;
+          // No telemóvel, fala o boletim num único disparo contínuo sem cancelar a fila entre frases
+          return await speakText(text, job);
         }
         finally { finishAnnouncement(job); }
       }
@@ -903,11 +928,12 @@ if (window.RadioNews && typeof window.RadioNews.create === 'function') {
         const job = beginAnnouncement('news');
         if (!job) { if ($('news-status'))$('news-status').textContent = 'A leitura de notícias não está disponível neste dispositivo.'; return false; }
         try {
-          if (nativeTTSAvailable()) {
-            try { window.speechSynthesis.cancel(); } catch (_) {}
+          if (!isMobile) {
+            for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
+            return true;
           }
-          for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
-          return true;
+          // No telemóvel, une as manchetes num bloco único para não perder a autorização de voz
+          return await speakText(phrases.join(' '), job);
         } finally { finishAnnouncement(job); }
       }
     });
