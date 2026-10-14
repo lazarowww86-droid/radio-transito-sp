@@ -1,4 +1,4 @@
-const BUILD = '20261014-r20';
+const BUILD = '20261014-r21';
 const MEDIA_BUILD = '20261013-r2-light';
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);
@@ -11,7 +11,11 @@ const CORE = [
 const urlFor = path => new URL(path, self.registration.scope).href;
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(SHELL).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(SHELL).then(async cache => {
+      await Promise.allSettled(CORE.map(path => cache.add(path)));
+    }).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -30,8 +34,6 @@ self.addEventListener('activate', event => {
     }));
 });
 
-// Áudios pedem intervalos de bytes. O arquivo completo em cache precisa
-// virar uma resposta 206, inclusive quando o ouvinte estiver offline.
 async function mediaRange(response, range) {
   if (!range) return response;
   const blob = await response.blob(), size = blob.size;
@@ -56,7 +58,6 @@ async function serveMedia(request) {
   const cached = await cache.match(request.url);
   if (cached && cached.status === 200) return mediaRange(cached, request.headers.get('Range'));
   const response = await fetch(request);
-  // Respostas parciais nunca substituem o arquivo completo no cache.
   if (response.status === 200 && !request.headers.has('Range')) {
     try { await cache.put(request.url, response.clone()); } catch (_) {}
   }
@@ -66,7 +67,7 @@ async function serveMedia(request) {
 async function serveShell(request) {
   const cache = await caches.open(SHELL);
   try {
-    const response = await fetch(request, { cache: 'no-cache' });
+    const response = await fetch(request, { cache: 'no-store' });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     try { await cache.put(request, response.clone()); } catch (_) {}
     return response;
