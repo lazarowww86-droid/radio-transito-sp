@@ -34,7 +34,7 @@ function sourceTime(value, offset) {
   return utc - offset * 1000;
 }
 function apiURL() {
-  const url = new URL('https://api.open-meteo.com/v1/forecast');
+  const url = new URL('[https://api.open-meteo.com/v1/forecast](https://api.open-meteo.com/v1/forecast)');
   url.search = new URLSearchParams({
     latitude: CITIES.map(c => c.latitude).join(','), longitude: CITIES.map(c => c.longitude).join(','),
     current: 'temperature_2m,apparent_temperature,weather_code', hourly: 'precipitation_probability',
@@ -56,8 +56,9 @@ function parse(data, now = Date.now()) {
         d.daily_units?.temperature_2m_min !== '°C' || d.daily_units?.temperature_2m_max !== '°C' ||
         !current || !temperature(current.temperature_2m) || !temperature(current.apparent_temperature)) throw new Error('Dados inválidos');
     const at = sourceTime(current.time, d.utc_offset_seconds), age = now - at;
-    if (!Number.isFinite(at) || age < -15 * 60000 || age > 75 * 60000) throw new Error('Dados desatualizados');
-    const dayIndex = Array.isArray(daily?.time) ? daily.time.indexOf(day) : -1;
+    if (!Number.isFinite(at) || age < -60 * 60000 || age > 180 * 60000) throw new Error('Dados desatualizados');
+    let dayIndex = Array.isArray(daily?.time) ? daily.time.indexOf(day) : -1;
+    if (dayIndex < 0 && Array.isArray(daily?.time) && daily.time.length > 0) dayIndex = 0;
     const min = daily?.temperature_2m_min?.[dayIndex], max = daily?.temperature_2m_max?.[dayIndex];
     if (dayIndex < 0 || !temperature(min) || !temperature(max) || min > max) throw new Error('Previsão diária indisponível');
     let rain = null;
@@ -76,15 +77,14 @@ function parse(data, now = Date.now()) {
 }
 function fresh(snapshot, now = Date.now()) {
   return Boolean(snapshot && now >= snapshot.fetchedAt - 60000 && now - snapshot.fetchedAt <= MAX_AGE &&
-    (snapshot.forecastDate === dateKey(now) || snapshot.forecastDate === dateKey(now + 24 * 3600 * 1000)) &&
-    snapshot.cities.every(city => now - city.at <= 75 * 60000 && now - city.at >= -15 * 60000));
+    snapshot.cities.every(city => now - city.at <= 180 * 60000 && now - city.at >= -60 * 60000));
 }
 function spokenNumber(value) { const rounded = Math.round(value); return rounded < 0 ? 'menos ' + Math.abs(rounded) : String(rounded); }
 function text(snapshot, now = Date.now()) {
   const dayLabel = snapshot.forecastDate === dateKey(now) ? 'hoje' : 'amanhã';
   return 'Rádio Trânsito SP. Previsão do tempo, segundo a Open Meteo. ' + snapshot.cities.map(city => {
     const degrees = Math.abs(Math.round(city.temperature)) === 1 ? 'grau' : 'graus';
-    return `Em ${city.name}, ${spokenNumber(city.temperature)} ${degrees}` +
+    return `Em ${city.name}, ${spokenNumber(city.temperature)}${degrees}` +
       (city.hasCondition ? ` e ${city.condition.toLocaleLowerCase('pt-BR')}` : '') +
       `. Sensação de ${spokenNumber(city.feels)}. Para ${dayLabel}, mínima de ${spokenNumber(city.min)} e máxima de ${spokenNumber(city.max)} graus.` +
       (city.rain === null ? '' : ` Chance de chuva nas próximas horas de até ${Math.round(city.rain)} por cento.`);
@@ -93,7 +93,7 @@ function text(snapshot, now = Date.now()) {
 
 function create(hooks) {
   const $ = id => document.getElementById(id);
-  if (!$('weather-status') || !$('weather-speak') \vert{}\vert{} !$('weather-refresh')) throw new Error('Painel de previsão ausente');
+  if (!$('weather-status') || !$('weather-speak') || !$('weather-refresh')) throw new Error('Painel de previsão ausente');
   let snapshot = null, inFlight = null, bulletinRunning = false, nextAt = null, interaction = 0;
   let lastError = false, lastPaint = '';
   const timers = [];
@@ -115,18 +115,18 @@ function create(hooks) {
       $(`weather-${city.id}-temp`).textContent = value ? numberFormatter.format(value.temperature) : '--';
       $(`weather-${city.id}-condition`).textContent = value?.condition || 'Previsão indisponível';
       $(`weather-${city.id}-feels`).textContent = value ? numberFormatter.format(value.feels) + '°C' : '--';
-      $(`weather-${city.id}-range`).textContent = value ? `${numberFormatter.format(value.min)}° / ${numberFormatter.format(value.max)}°` : '--';
+      $(`weather-${city.id}-range`).textContent = value ? `${numberFormatter.format(value.min)}° /${numberFormatter.format(value.max)}°` : '--';
       $(`weather-${city.id}-day`).textContent = available ? `Mín. / máx. ${dayLabel}` : 'Mín. / máx.';
       $(`weather-${city.id}-rain`).textContent = value && value.rain !== null ? `Chance de chuva nas próximas horas: até ${Math.round(value.rain)}%` : 'Chance de chuva não informada';
     }
     if (available) {
       message((lastError ? 'Consulta indisponível; últimas estimativas: ' : 'Estimativas válidas às ') +
-        snapshot.cities.map(city => `${city.name} ${hourText(city.at)}`).join(' • ') + '.');
+        snapshot.cities.map(city => `${city.name}${hourText(city.at)}`).join(' • ') + '.');
     } else message(snapshot ? 'Previsão desatualizada. Aguardando dados recentes.' : 'Previsão temporariamente indisponível. Tente atualizar.');
   }
   function refresh() {
     if (inFlight) return inFlight;
-    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10000);
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 12000);
     buttons(true);
     message('Consultando a previsão de São Paulo e Guarulhos…');
     inFlight = (async () => {
@@ -161,12 +161,8 @@ function create(hooks) {
     bulletinRunning = true;
     buttons(true);
     try {
-      // Se for clique manual e os dados já estiverem frescos na tela, fala imediatamente
-      // sem esperar novo fetch(), preservando o User Gesture de áudio nos celulares!
       let loaded = fresh(snapshot);
-      if (!loaded || !manual) {
-        loaded = await refresh();
-      }
+      if (!loaded) loaded = await refresh();
       if (revision !== interaction || (wasListening && !hooks.isListening())) return;
       if (!loaded || !fresh(snapshot)) { if (!manual) nextAt = Date.now() + RETRY; return; }
       if (!hooks.canAnnounce(manual)) { if (!manual) nextAt = Date.now() + 5000; return; }
@@ -192,7 +188,8 @@ function create(hooks) {
     if (Date.now() >= nextAt && !bulletinRunning && hooks.canAnnounce(false)) bulletin(false);
   }
   function cancelPending() { interaction++; }
-  for (const id of ['play', 'next', 'prev']) $(id)?.addEventListener('click', cancelPending);$('weather-speak').addEventListener('click', () => { hooks.unlockVoice?.(); bulletin(true); });
+  for (const id of ['play', 'next', 'prev']) $(id)?.addEventListener('click', cancelPending);
+  $('weather-speak').addEventListener('click', () => { hooks.unlockVoice?.(); bulletin(true); });
   $('weather-refresh').addEventListener('click', refresh);
   timers.push(setInterval(refresh, INTERVAL), setInterval(schedule, 1000));
   refresh();
