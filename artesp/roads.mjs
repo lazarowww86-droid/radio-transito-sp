@@ -11,6 +11,18 @@ export function fresh(date,now){const t=Date.parse(date);return Number.isFinite(
 function dateBR(raw){const s=text(raw);let m=s.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);if(m)return `${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00-03:00`;m=s.match(/(\d{1,2}) de (\w+) de (\d{4}) às (\d{2}):(\d{2})/);if(!m)return '';const month=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'].indexOf(m[2].toLowerCase())+1;return month?`${m[3]}-${String(month).padStart(2,'0')}-${m[1].padStart(2,'0')}T${m[4]}:${m[5]}:00-03:00`:'';}
 const attr=(s,k)=>text(s.match(new RegExp('\\b'+k+'\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s>]+))','i'))?.slice(1).find(v=>v!==undefined)||'');
 function item(source,title,summary,date,url){title=title.slice(0,150);summary=summary.slice(0,420);return {id:`${source.id}:${url}:${date}:${title}:${summary}`,source_id:source.id,source:source.name,title:title.slice(0,150),summary:summary.slice(0,420),published_at:new Date(date).toISOString(),url};}
+// O portal usa três casas decimais: 29,000 significa km 29, não 29 mil.
+export function kilometre(value) {
+ const match = /^(\d{1,4})(?:,(\d{1,3}))?$/.exec(String(value).trim());
+ if (!match) return null;
+ const km = Number(match[1]), metres = Number((match[2] || '').padEnd(3, '0'));
+ return String(km) + (metres ? ` e ${metres} ${metres === 1 ? 'metro' : 'metros'}` : '');
+}
+export function kilometreRange(start, end) {
+ const first = kilometre(start), last = kilometre(end);
+ if (first === null) return '';
+ return last === null || first === last ? `No quilômetro ${first}` : `Do quilômetro ${first} ao quilômetro ${last}`;
+}
 export function parseArtesp(html,now=Date.now()){
  const source=SOURCES[0],items=[];
  for(const card of html.split(/(?=<div\b[^>]*\sdata-rod-cod=)/i).slice(1)){
@@ -21,7 +33,7 @@ export function parseArtesp(html,now=Date.now()){
    const date=dateBR(field('atualizado-em'));if(!fresh(date,now))continue;
    const condition=text(chunk.match(/tracking-wide[^>]*>[\s\S]*?<\/span>\s*([^<]+)/i)?.[1]||attr(header,'data-trafego'));
    const km1=field('km-inicial'),km2=field('km-final'),cause=field('causa');
-   const summary=[condition,km1?`Quilômetros ${km1}${km2?' a '+km2:''}`:'',cause&&cause!=='—'?`Causa: ${cause}`:'',field('comentario')].filter(Boolean).join('. ');
+   const summary=[condition,kilometreRange(km1,km2),cause&&cause!=='—'?`Causa: ${cause}`:'',field('comentario')].filter(Boolean).join('. ');
    if(summary)items.push(item(source,`${name}${direction?' — '+direction:''}`,summary,date,source.url));
   }
  }
@@ -63,8 +75,9 @@ export async function download(url){
 export class RoadsGateway{
  constructor(storage,{fetchPage=download,now=()=>Date.now()}={}){this.storage=storage;this.fetchPage=fetchPage;this.now=now;this.pending=null;}
  async get(){if(this.pending)return this.pending;this.pending=this.load();try{return await this.pending;}finally{this.pending=null;}}
- async load(){const now=this.now(),cached=await this.storage.get('roads-public-v2');if(cached&&now-cached.checked<300000)return this.result(cached,now);
+ async load(){const now=this.now(),cached=await this.storage.get('roads-public-v3');if(cached&&now-cached.checked<300000)return this.result(cached,now);
  const sources=await Promise.all(SOURCES.map(async source=>{try{const html=await this.fetchPage(source.url);let items;if(source.id==='artesp')items=parseArtesp(html,now);else{const url=articleURL(html,source,now);items=url?parseEco(await this.fetchPage(url),source,url,now):[];}return {...source,status:items.length?'ok':'no_recent',items};}catch(_){return {...source,status:'unavailable',items:[]};}}));
- const value={checked:now,sources};await this.storage.put('roads-public-v2',value);return this.result(value,now);}
+ const value={checked:now,sources};await this.storage.put('roads-public-v3',value);return this.result(value,now);}
  result(value,now){const sources=value.sources.map(s=>{const items=s.items.filter(i=>fresh(i.published_at,now));return {...s,items,status:s.status==='ok'&&!items.length?'no_recent':s.status};});return {status:200,body:{checked_at:new Date(value.checked).toISOString(),sources:sources.map(({items,...s})=>s),items:sources.flatMap(s=>s.items)}};}
 }
+
