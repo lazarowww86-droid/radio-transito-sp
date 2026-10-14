@@ -2,19 +2,21 @@
 'use strict';
 const $ = id => document.getElementById(id);
 
+// Um podcast por dia, repetido nos horários fixos; música aleatória no restante do dia.
 const podcasts = [
  {type:'podcast',title:'Maníaco do Parque: era psicopata ou doente?',artist:'Histórias que Marcaram',src:'media/maniaco-do-parque.mp3',duration:1192.882},
  {type:'podcast',title:'Carandiru: do massacre ao indulto',artist:'Histórias que Marcaram',src:'media/carandiru.mp3',duration:793.182},
  {type:'podcast',title:'Caso Isabella Nardoni: mídia e perícia',artist:'Histórias que Marcaram',src:'media/isabella-nardoni.mp3',duration:695.144},
  {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3',duration:601.783}
 ];
-const musicTracks = window.RadioMusicTracks || [];
+const musicTracks = window.RadioMusicTracks;
 const playlist = [...musicTracks, ...podcasts];
 const programming = window.RadioProgramming.create(
   musicTracks.map((_, i) => i),
   podcasts.map((track, i) => ({index: musicTracks.length + i, duration: track.duration}))
 );
 
+// O estado do botão representa a intenção do ouvinte, inclusive durante avisos.
 const BUILD = '20261013-r2-light';
 let current = $('audio'), standby = $('audio-next');
 const bulletinAudio = $('bulletin-audio');
@@ -75,6 +77,7 @@ function prepare(element, index, force = false) {
   element.load();
 }
 
+// Dois elementos reutilizados: a próxima faixa já está carregada antes da troca.
 function preloadFollowing() {
   prepare(standby, programming.peek());
   for (const distance of [1, 2]) warmMedia(playlist[programming.peek(distance)].src);
@@ -118,8 +121,21 @@ function unlockAuxiliaryAudio() {
       }).catch(() => { element.muted = false; });
     }
   }
-  if ('speechSynthesis' in window) {
-    try { window.speechSynthesis.getVoices(); } catch (_) {}
+  // Crítico para celulares Android (S24 Ultra): como weather.js e news.js fazem um await refresh()
+  // antes de chamar announce(), precisamos destravar o speechSynthesis no milissegundo do clique!
+  if (canSpeak() && !announcement) {
+    try {
+      const synth = window.speechSynthesis;
+      synth.getVoices();
+      if (!synth.speaking && !synth.pending) {
+        const primer = new SpeechSynthesisUtterance(' ');
+        primer.lang = 'pt-BR';
+        primer.volume = 0;
+        primer.rate = 2;
+        synth.speak(primer);
+      }
+      if (synth.paused) synth.resume();
+    } catch (_) {}
   }
 }
 
@@ -275,13 +291,9 @@ setInterval(() => {
   if (wanted && !announcement && Date.now() - lastProgress > 12000) failTrack(current);
 }, 1000);
 
-function nativeTTSAvailable() {
-  return 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
-}
-
-// Com o fallback em áudio, qualquer navegador com <audio> pode ler os boletins!
+// Avisos pausam o elemento atual e o retomam sem recarregar o podcast.
 function canSpeak() {
-  return true;
+  return 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
 }
 
 const isAndroid = /Android/i.test(navigator.userAgent || '');
@@ -290,7 +302,7 @@ let weatherVoiceName = '';
 try { weatherVoiceName = localStorage.getItem('radio_weather_voice') || ''; } catch (_) {}
 
 function portugueseVoices() {
-  if (!nativeTTSAvailable()) return [];
+  if (!canSpeak()) return [];
   const all = window.speechSynthesis.getVoices() || [];
   return all.filter(v => {
     const lang = (v.lang || '').replace('_', '-').toLowerCase();
@@ -312,7 +324,7 @@ function selectedVoice(kind) {
 
 function paintVoices() {
   const selector = $('weather-voice');
-  if (!selector) return;
+  if (!selector || !canSpeak()) return;
   const voices = portugueseVoices(), preferred = preferredWeatherVoice(voices);
   selector.replaceChildren();
   const automatic = document.createElement('option');
@@ -328,12 +340,11 @@ function paintVoices() {
   selector.value = voices.some(v => v.name === weatherVoiceName) ? weatherVoiceName : '';
 }
 
-if ($('weather-voice')) {
-  $('weather-voice').addEventListener('change', event => {
+if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => {
     weatherVoiceName = event.target.value;
     try { localStorage.setItem('radio_weather_voice', weatherVoiceName); } catch (_) {}
   });
-  if (nativeTTSAvailable()) {
+  if (canSpeak()) {
     try { window.speechSynthesis.onvoiceschanged = paintVoices; } catch (_) {}
     window.speechSynthesis.addEventListener?.('voiceschanged', paintVoices);
     paintVoices();
@@ -341,7 +352,7 @@ if ($('weather-voice')) {
 }
 
 function beginAnnouncement(kind) {
-  if (announcement) return null;
+  if (announcement || !canSpeak()) return null;
   const job = { kind, cancelled: false, cleanups: new Set() };
   announcement = job;
   ++playSequence;
@@ -359,7 +370,7 @@ function cancelAnnouncement() {
   job.cancelled = true;
   for (const cleanup of [...job.cleanups]) cleanup();
   bulletinAudio.pause();
-  if (nativeTTSAvailable()) {
+  if (canSpeak()) {
     try { window.speechSynthesis.cancel(); } catch (_) {}
   }
 }
@@ -407,70 +418,18 @@ function playSting(src, job) {
   });
 }
 
-// Divide textos em blocos de até 180 caracteres para o fallback de áudio TTS
-function splitIntoChunks(text, maxLen = 180) {
-  const words = text.split(/\s+/);
-  const chunks = [];
-  let currentChunk = '';
-  for (const word of words) {
-    if (!word) continue;
-    if ((currentChunk + ' ' + word).trim().length <= maxLen) {
-      currentChunk = (currentChunk + ' ' + word).trim();
-    } else {
-      if (currentChunk) chunks.push(currentChunk);
-      currentChunk = word;
-    }
-  }
-  if (currentChunk) chunks.push(currentChunk);
-  return chunks;
-}
-
-// Fallback universal: reproduz a fala pelo elemento <audio id="bulletin-audio"> caso o speechSynthesis do celular falhe
-async function speakViaAudioFallback(text, job) {
-  const chunks = splitIntoChunks(text, 180);
-  for (const chunk of chunks) {
-    if (job.cancelled || announcement !== job) return false;
-    const ok = await new Promise(resolve => {
-      let settled = false, timer;
-      const finish = result => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        bulletinAudio.onended = bulletinAudio.onerror = bulletinAudio.onplaying = null;
-        bulletinAudio.pause();
-        job.cleanups.delete(cancel);
-        resolve(result);
-      };
-      const cancel = () => finish(false);
-      job.cleanups.add(cancel);
-      bulletinAudio.onended = () => finish(true);
-      bulletinAudio.onerror = cancel;
-      bulletinAudio.onplaying = () => {
-        clearTimeout(timer);
-        timer = setTimeout(cancel, 25000);
-      };
-      timer = setTimeout(cancel, 6000);
-      bulletinAudio.muted = false;
-      bulletinAudio.src = `[https://translate.googleapis.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=$](https://translate.googleapis.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=$){encodeURIComponent(chunk)}`;
-      bulletinAudio.load();
-      Promise.resolve(bulletinAudio.play()).catch(cancel);
-    });
-    if (!ok) return false;
-  }
-  return true;
-}
-
-function speakNative(clean, job) {
-  if (!nativeTTSAvailable() || job.useAudioFallback) return Promise.resolve(false);
+function speakText(text, job, resetQueue = false) {
+  const clean = typeof text === 'string' ? text.trim() : '';
+  if (!clean) return Promise.resolve(true);
+  if (job.cancelled || announcement !== job || !canSpeak()) return Promise.resolve(false);
   return new Promise(resolve => {
-    const synth = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance(clean);
-    let settled = false, started = false, timer, poll;
-
+    const synth = window.speechSynthesis, utterance = new SpeechSynthesisUtterance(clean);
+    let settled = false, started = false, timer, poll, speakDelay;
     const finish = ok => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearTimeout(speakDelay);
       clearInterval(poll);
       utterance.onstart = utterance.onend = utterance.onerror = null;
       job.cleanups.delete(cancel);
@@ -479,11 +438,9 @@ function speakNative(clean, job) {
       }
       resolve(ok);
     };
-
     const cancel = () => finish(false);
     job.cleanups.add(cancel);
     job.utterance = utterance;
-
     utterance.lang = 'pt-BR';
     utterance.rate = 1;
 
@@ -496,7 +453,7 @@ function speakNative(clean, job) {
       if (started) return;
       started = true;
       clearTimeout(timer);
-      timer = setTimeout(cancel, Math.min(180000, Math.max(20000, clean.length / 7 * 1000 + 8000)));
+      timer = setTimeout(cancel, Math.min(180000, Math.max(15000, clean.length / 8 * 1000 + 5000)));
     };
 
     utterance.onstart = markStarted;
@@ -507,38 +464,30 @@ function speakNative(clean, job) {
       }
       cancel();
     };
-
     poll = setInterval(() => {
       if (synth.speaking) markStarted();
       else if (started && !synth.pending) finish(true);
-    }, 200);
-
-    // Se a voz nativa do celular não começar em 2,5 segundos, aciona o fallback de áudio
-    timer = setTimeout(cancel, 2500);
-
+    }, 250);
+    timer = setTimeout(cancel, 8000);
     try {
-      if (synth.paused) synth.resume();
-      synth.speak(utterance);
-    } catch (_) {
-      cancel();
-    }
+      if (resetQueue && (synth.speaking || synth.pending)) {
+        synth.cancel();
+        speakDelay = setTimeout(() => {
+          if (settled || job.cancelled || announcement !== job) return;
+          try {
+            if (synth.paused) synth.resume();
+            synth.speak(utterance);
+          } catch (_) { cancel(); }
+        }, 60);
+      } else {
+        if (synth.paused) synth.resume();
+        synth.speak(utterance);
+      }
+    } catch (_) { cancel(); }
   });
 }
 
-async function speakText(text, job) {
-  const clean = typeof text === 'string' ? text.trim() : '';
-  if (!clean) return true;
-  if (job.cancelled || announcement !== job) return false;
-
-  const nativeOk = await speakNative(clean, job);
-  if (nativeOk) return true;
-  if (job.cancelled || announcement !== job) return false;
-
-  // Se o navegador do celular bloqueou ou não tem voz TTS ativa, usa o fallback de áudio
-  job.useAudioFallback = true;
-  return speakViaAudioFallback(clean, job);
-}
-
+// Dicionário de rodovias da ARTESP para converter códigos técnicos (ex: 0021SP, SPD 006/021) em nomes claros.
 const RODOVIAS_ARTESP = {
   '015': 'Marginal Tietê / Pinheiros (SP-015)',
   '021': 'Rodoanel Mário Covas (SP-021)',
@@ -621,7 +570,7 @@ function formatTrafficItem(raw) {
       const prep = preposicaoRodovia(mainName);
       const p = (prefix || '').toUpperCase();
       const tipo = p === 'SPA' ? 'Acesso' : p === 'SPI' ? 'Interligação' : 'Dispositivo e acesso';
-      return `${tipo}${branchNum} ${prep}${mainName}`;
+      return `${tipo} ${branchNum} ${prep} ${mainName}`;
     }
   );
 
@@ -675,7 +624,7 @@ function prepareTrafficSpeech(text) {
 }
 
 let items = [], updated = null, timestampVerified = true;
-const DEFAULT_FEED_URL = '[https://radio-transito-sp.lazarowww86.workers.dev/boletins](https://radio-transito-sp.lazarowww86.workers.dev/boletins)';
+const DEFAULT_FEED_URL = 'https://radio-transito-sp.lazarowww86.workers.dev/boletins';
 const feedURL = DEFAULT_FEED_URL;
 let feedRequest = 0, feedController = null;
 let feedLoading = false, feedError = '', timestampKind = '';
@@ -700,8 +649,7 @@ function report() {
     $('traffic').textContent = 'A fonte não apresenta atualização recente.';
   } else {
     const label = official ? timestampKind === 'resposta_oficial_http' ? 'Resposta oficial da ARTESP: ' : 'Consulta oficial da ARTESP: ' : 'Atualizado: ';
-    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    $('traffic').textContent = items.slice(0, 6).join(' • ');
+    $('traffic-status').textContent = label + new Date(updated).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });$('traffic').textContent = items.slice(0, 6).join(' • ');
   }
 }
 
@@ -746,18 +694,19 @@ async function trafficBulletin() {
   unlockAuxiliaryAudio();
   if (!feedFresh()) { report(); return; }
   const text = prepareTrafficSpeech(items.slice(0, 6).join('. '));
-  if (announcement) cancelAnnouncement();
   const job = beginAnnouncement('traffic');
-  if (!job) return;
+  if (!job) {
+    if (!canSpeak()) $('traffic-status').textContent = 'A leitura por voz não está disponível neste navegador.';
+    return;
+  }
   try {
     await playSting('media/vinheta-transito-mix.mp3', job);
-    const spoken = await speakText(text, job);
+    const spoken = await speakText(text, job, true);
     if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
   } finally { finishAnnouncement(job); }
 }
 
-$('speak').addEventListener('click', trafficBulletin);
-$('refresh').addEventListener('click', refresh);
+$('speak').addEventListener('click', trafficBulletin);$('refresh').addEventListener('click', refresh);
 refresh();
 setInterval(async () => {
   const fresh = await refresh();
@@ -765,6 +714,7 @@ setInterval(async () => {
 }, 15 * 60 * 1000);
 setInterval(report, 60000);
 
+// A hora da rádio é a de São Paulo, independentemente do fuso do dispositivo.
 const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
@@ -775,8 +725,8 @@ function radioTime(date = new Date()) {
 }
 function timeText(parts) {
   const hour = Number(parts.hour), minute = Number(parts.minute);
-  return `Rádio Trânsito SP. Agora, ${hour}${hour === 1 ? 'hora' : 'horas'}` +
-    (minute ? ` e ${minute}${minute === 1 ? 'minuto' : 'minutos'}` : '') + '.';
+  return `Rádio Trânsito SP. Agora, ${hour} ${hour === 1 ? 'hora' : 'horas'}` +
+    (minute ? ` e ${minute} ${minute === 1 ? 'minuto' : 'minutos'}` : '') + '.';
 }
 function checkTimeAnnouncement() {
   if (!wanted || current.paused || pendingPlay || current.readyState < 2 || announcement) return;
@@ -787,7 +737,7 @@ function checkTimeAnnouncement() {
   const job = beginAnnouncement('time');
   if (!job) return;
   lastTimeSlot = slot;
-  speakText(timeText(parts), job).finally(() => finishAnnouncement(job));
+  speakText(timeText(parts), job, true).finally(() => finishAnnouncement(job));
 }
 function tick() {
   syncSchedule();
@@ -810,7 +760,7 @@ function previousProgram() {
 }
 function syncSchedule() {
   const daily = programming.daily();
-  if ($('daily-podcast')) $('daily-podcast').textContent = playlist[daily.index].title;
+  if ($('daily-podcast'))$('daily-podcast').textContent = playlist[daily.index].title;
   const upcoming = programming.upcoming();
   if (upcoming && upcoming.inSeconds <= 120) warmMedia(playlist[upcoming.index].src);
   if (!wanted) return false;
@@ -830,24 +780,21 @@ trackInfo();
 controls();
 status('Toque em “Ouvir ao vivo” para entrar na programação.');
 
+// A previsão usa a mesma retomada dos avisos; sua consulta não pausa o player.
 if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
   try {
     window.RadioWeather.create({
       isListening: () => wanted,
       unlockVoice: unlockAuxiliaryAudio,
-      canAnnounce: manual => (!announcement || manual) && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
+      canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
       announce: async (text, snapshot, stillValid = () => true) => {
-        if (!stillValid() || pendingPlay) return false;
-        if (announcement) cancelAnnouncement();
+        if (!stillValid() || announcement || pendingPlay) return false;
         const job = beginAnnouncement('weather');
         if (!job) return false;
         try {
-          if (nativeTTSAvailable()) {
-            try { window.speechSynthesis.cancel(); } catch (_) {}
-          }
-          const phrases = (text.match(/[^.!?]+[.!?]?/g) || [text]).map(p => p.trim()).filter(Boolean);
-          for (const phrase of phrases) {
-            if (!stillValid() || !await speakText(phrase, job)) return false;
+          const phrases = text.match(/[^.!?]+[.!?]?/g) || [text];
+          for (let i = 0; i < phrases.length; i++) {
+            if (!await speakText(phrases[i].trim(), job, i === 0)) return false;
           }
           return true;
         }
@@ -855,34 +802,30 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
       }
     });
   } catch (_) {
-    if ($('weather-status')) $('weather-status').textContent = 'Previsão temporariamente indisponível.';
+    if ($('weather-status'))$('weather-status').textContent = 'Previsão temporariamente indisponível.';
   }
 }
 
+// As notícias compartilham a retomada de áudio já usada pelos demais boletins.
 if (window.RadioNews && typeof window.RadioNews.create === 'function') {
   try {
     window.RadioNews.create({
       isListening: () => wanted,
       unlockVoice: unlockAuxiliaryAudio,
-      canAnnounce: manual => (!announcement || manual) && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
+      canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
       announce: async (phrases, stillValid = () => true) => {
-        if (!stillValid() || pendingPlay) return false;
-        if (announcement) cancelAnnouncement();
+        if (!stillValid() || announcement || pendingPlay) return false;
         const job = beginAnnouncement('news');
-        if (!job) return false;
+        if (!job) { if ($('news-status'))$('news-status').textContent = 'A leitura de notícias não está disponível neste dispositivo.'; return false; }
         try {
-          if (nativeTTSAvailable()) {
-            try { window.speechSynthesis.cancel(); } catch (_) {}
-          }
-          const validPhrases = phrases.map(p => (p || '').trim()).filter(Boolean);
-          for (const phrase of validPhrases) {
-            if (!stillValid() || !await speakText(phrase, job)) return false;
+          for (let i = 0; i < phrases.length; i++) {
+            if (!stillValid() || !await speakText(phrases[i], job, i === 0)) return false;
           }
           return true;
         } finally { finishAnnouncement(job); }
       }
     });
-  } catch (_) { if ($('news-status')) $('news-status').textContent = 'Notícias temporariamente indisponíveis.'; }
+  } catch (_) { if ($('news-status'))$('news-status').textContent = 'Notícias temporariamente indisponíveis.'; }
 }
 
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
