@@ -945,6 +945,25 @@ if (window.RadioNews && typeof window.RadioNews.create === 'function') {
   } catch (_) { if ($('news-status'))$('news-status').textContent = 'Notícias temporariamente indisponíveis.'; }
 }
 
+// As fontes rodoviárias usam a mesma fila exclusiva de avisos da rádio.
+if (window.RadioRoads) {
+  try { window.RadioRoads.create({
+    isListening: () => wanted,
+    unlockVoice: unlockAuxiliaryAudio,
+    canAnnounce: manual => !announcement && !pendingPlay && (manual || (wanted && !current.paused && current.readyState >= 2)),
+    announce: async (phrases, stillValid) => {
+      if (!stillValid() || announcement || pendingPlay) return false;
+      const job = beginAnnouncement('roads');
+      if (!job) return false;
+      try {
+        if (isMobile) return await speakText(phrases.join(' '), job);
+        for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
+        return true;
+      } finally { finishAnnouncement(job); }
+    }
+  }); } catch (_) { if ($('roads-status')) $('roads-status').textContent = 'Informações das rodovias temporariamente indisponíveis.'; }
+}
+
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     for (const src of mediaCache.keys()) fetch(mediaURL(src), { cache: 'force-cache' }).catch(() => {});
@@ -955,3 +974,4 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
