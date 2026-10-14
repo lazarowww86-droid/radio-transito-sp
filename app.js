@@ -66,7 +66,17 @@ function controls() {
   $('play').setAttribute('aria-label', listening ? 'Pausar a rádio' : 'Ouvir a rádio');
   $('play').setAttribute('aria-pressed', String(listening));
   document.body.classList.toggle('is-playing', listening);
-  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = listening ? 'playing' : 'paused';
+  
+  // Mantém a sessão de mídia ativa para o S24 Ultra não suspender o áudio com a tela desligada
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = listening ? 'playing' : 'paused';
+    try {
+      navigator.mediaSession.setActionHandler('play', startProgram);
+      navigator.mediaSession.setActionHandler('pause', pauseProgram);
+      navigator.mediaSession.setActionHandler('previoustrack', previousProgram);
+      navigator.mediaSession.setActionHandler('nexttrack', advanceProgram);
+    } catch (_) {}
+  }
 }
 
 function fmt(t) {
@@ -558,7 +568,6 @@ function speakNative(clean, job) {
       else if (started && !synth.pending) finish(true);
     }, 200);
 
-    // No PC aguarda 3s (original). No telemóvel aguarda 2,5s; se a voz nativa não arrancar, passa para o áudio
     timer = setTimeout(cancel, isMobile ? 2500 : 3000);
     try {
       if (!isMobile) {
@@ -566,7 +575,6 @@ function speakNative(clean, job) {
         synth.resume();
         synth.speak(utterance);
       } else {
-        // No Android, NUNCA chamar synth.cancel() colado ao synth.speak(), pois aborta a fala!
         if (synth.paused) synth.resume();
         synth.speak(utterance);
       }
@@ -805,7 +813,6 @@ async function trafficBulletin() {
       const spoken = await speakText(text, job);
       if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
     } else {
-      // No telemóvel, chama a voz imediatamente no clique para não perder a permissão de áudio durante a vinheta
       const spoken = await speakText(text, job);
       if (spoken) await playSting('media/vinheta-retorno-mix.mp3', job);
     }
@@ -905,7 +912,6 @@ if (window.RadioWeather && typeof window.RadioWeather.create === 'function') {
             }
             return true;
           }
-          // No telemóvel, fala o boletim num único disparo contínuo sem cancelar a fila entre frases
           return await speakText(text, job);
         }
         finally { finishAnnouncement(job); }
@@ -932,7 +938,6 @@ if (window.RadioNews && typeof window.RadioNews.create === 'function') {
             for (const phrase of phrases) if (!stillValid() || !await speakText(phrase, job)) return false;
             return true;
           }
-          // No telemóvel, une as manchetes num bloco único para não perder a autorização de voz
           return await speakText(phrases.join(' '), job);
         } finally { finishAnnouncement(job); }
       }
