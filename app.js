@@ -587,22 +587,18 @@ function playSting(src, job) {
 }
 
 function splitIntoChunks(text, maxLen = 165) {
-  const sentences = text.match(/[^.!?]+[.!?]?/g) || [text];
   const chunks = [];
-  for (const s of sentences) {
-    const words = s.trim().split(/\s+/);
-    let currentChunk = '';
-    for (const word of words) {
-      if (!word) continue;
-      if ((currentChunk + ' ' + word).trim().length <= maxLen) {
-        currentChunk = (currentChunk + ' ' + word).trim();
-      } else {
-        if (currentChunk) chunks.push(currentChunk);
-        currentChunk = word;
-      }
+  let currentChunk = '';
+  for (const word of text.trim().split(/\s+/)) {
+    if (!word) continue;
+    if ((currentChunk + ' ' + word).trim().length <= maxLen) {
+      currentChunk = (currentChunk + ' ' + word).trim();
+    } else {
+      if (currentChunk) chunks.push(currentChunk);
+      currentChunk = word;
     }
-    if (currentChunk) chunks.push(currentChunk);
   }
+  if (currentChunk) chunks.push(currentChunk);
   return chunks;
 }
 
@@ -622,13 +618,28 @@ async function speakViaAudioFallback(text, job) {
     for (const makeUrl of endpoints) {
       if (job.cancelled || announcement !== job) return false;
       const ok = await new Promise(resolve => {
-        let settled = false, timer, started = false;
+        let settled = false, timer, started = false, retryTimer = null, resumeAttempts = 0;
         let deadline = Date.now() + (job.backgroundAudio ? 10000 : 6000);
         let lastAudioPosition = 0, lastAudioProgress = Date.now();
+        const resumeVoice = () => {
+          if (settled || !started || !audio.paused || audio.ended || job.cancelled || announcement !== job || retryTimer !== null || resumeAttempts >= 2) return;
+          retryTimer = setTimeout(() => {
+            retryTimer = null;
+            if (settled || job.cancelled || announcement !== job || !audio.paused || audio.ended) return;
+            resumeAttempts++;
+            window.RadioDiagnostics?.record('voice-resume-attempt', {kind:job.kind, attempt:resumeAttempts, position:audio.currentTime});
+            Promise.resolve(audio.play()).catch(error => {
+              if (settled) return;
+              window.RadioDiagnostics?.record('voice-resume-error', {kind:job.kind, error:error?.name});
+              finish(false);
+            });
+          }, 250);
+        };
         const check = () => {
           if (settled) return;
           const now = Date.now(), position = audio.currentTime;
           if (started && audio.ended) { finish(true); return; }
+          if (started && audio.paused) resumeVoice();
           if (started && Number.isFinite(position) && position > lastAudioPosition + 0.05) {
             lastAudioPosition = position;
             lastAudioProgress = now;
@@ -644,8 +655,9 @@ async function speakViaAudioFallback(text, job) {
           window.RadioDiagnostics?.record('fallback-finish', {kind:job.kind, ok:result, mainPlayer:audio === current});
           settled = true;
           clearTimeout(timer);
+          clearTimeout(retryTimer);
           if (job.audioCheck === check) delete job.audioCheck;
-          audio.onended = audio.onerror = audio.onplaying = null;
+          audio.onended = audio.onerror = audio.onplaying = audio.onpause = null;
           audio.pause();
           job.cleanups.delete(cancel);
           resolve(result);
@@ -653,6 +665,12 @@ async function speakViaAudioFallback(text, job) {
         const cancel = () => finish(false);
         job.cleanups.add(cancel);
         audio.onended = () => finish(true);
+        audio.onpause = () => {
+          if (!settled && started && !audio.ended) {
+            window.RadioDiagnostics?.record('voice-paused', {kind:job.kind, position:audio.currentTime});
+            resumeVoice();
+          }
+        };
         audio.onerror = () => { window.RadioDiagnostics?.record('fallback-error', {kind:job.kind, code:audio.error?.code}); cancel(); };
         audio.onplaying = () => {
           window.RadioDiagnostics?.record('fallback-playing', {kind:job.kind, mainPlayer:audio === current});
@@ -1151,6 +1169,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 

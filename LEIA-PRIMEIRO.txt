@@ -1,14 +1,12 @@
-LEIA PRIMEIRO — BOLETIM DE RODOVIAS TRAVADO
+LEIA PRIMEIRO — LEITURA DOS BOLETINS E PAUSAS ENTRE TRECHOS
 
-Extraia o ZIP. Envie app.js, diagnostics.js, index.html e sw.js para a raiz do repositório, substituindo os quatro arquivos. Não envie o ZIP diretamente. Não precisa enviar artesp nem media.
+Extraia o ZIP. Envie app.js, diagnostics.js, index.html e sw.js para a raiz do GitHub, substituindo os quatro arquivos. Não envie o ZIP diretamente. Não precisa enviar artesp nem media.
 
-O diagnóstico mostrou que a voz do boletim rodoviário iniciou um trecho e não liberou o aviso; a música ficou aguardando esse término. A retomada funcionou nos outros anúncios registrados.
+Mudanças: se um trecho de voz inicia e pausa inesperadamente, tenta continuar o mesmo áudio da posição atual até duas vezes, sem recarregar ou repetir desde o início. Respeita Pausar e Próxima. Também junta frases curtas nos blocos de até 165 caracteres para reduzir mudanças de arquivo e esperas entre frases, mantendo as palavras e a pontuação do texto normal.
 
-Ajuste: supervisão do áudio com verificações também pelos ciclos da rádio. Reconhece fim do arquivo sem evento ended e encerra tentativa sem progresso por dez segundos ou que exceda trinta segundos por trecho. Eventos playing repetidos não prorrogam indefinidamente esse prazo. Se a leitura travar, ela pode ser interrompida para liberar a música.
+Mantidas: voz nativa com tela ligada, rota /voz, acervo, programação, horários, notícias, previsão, trânsito, pausa da música durante aviso e proteções de retomada e travamento das versões 40/41. Se a voz continuar falhando, a proteção ainda pode encerrar a leitura e devolver a música.
 
-Mantidos: rota /voz, leitura da hora, proteção de retomada da versão 40, acervo, programação, fontes, previsão, notícias e pausas dos boletins.
+48 testes simulados passaram. Incluem pausa aos 0,11 segundo, continuação sem reload ou reinício, limite de tentativas, cancelamento e texto completo em vários blocos. Ainda é necessária confirmação no Samsung.
 
-43 testes simulados passaram. Incluem perda do callback do temporizador, ausência do evento ended, progresso normal, limite absoluto e respeito à pausa manual. Ainda é necessário confirmar no Samsung. Se o navegador suspender todos os ciclos da página, a verificação também aguarda a execução voltar; não há garantia de prazo exato em segundo plano.
-
-Após o próximo boletim rodoviário, confira a leitura e a volta da música. Se falhar, baixe o diagnóstico no mesmo navegador:
+No próximo boletim rodoviário com tela apagada, confira se ele termina a leitura e a música volta. Se falhar, envie o registro baixado no mesmo navegador:
 https://lazarowww86-droid.github.io/radio-transito-sp/?diagnostico=1
