@@ -57,6 +57,7 @@ let failureTimer = null, lastProgress = Date.now(), lastPosition = -1;
 const failedSources = new Set();
 const RECOVERY_WINDOW = 6000;
 let recovery = null, recoveryTimer = null;
+let postBulletin = null;
 const mediaCache = new Map(), preloads = new Map();
 const mediaURL = src => new URL(`${src}?v=${BUILD}`, document.baseURI).href;
 const wrap = i => (i + playlist.length) % playlist.length;
@@ -169,6 +170,46 @@ function unlockAuxiliaryAudio() {
   }
 }
 
+// A transição de volta à música não deve entrar no avanço por falha de arquivo.
+function cancelPostBulletin() {
+  if (!postBulletin) return;
+  clearTimeout(postBulletin.timer);
+  clearTimeout(postBulletin.retry);
+  postBulletin = null;
+}
+function retryPostBulletin() {
+  const job = postBulletin;
+  if (!job || !wanted || announcement || current !== job.element || idx !== job.index || job.retry !== null || job.attempts >= 3) return;
+  job.retry = setTimeout(() => {
+    job.retry = null;
+    if (postBulletin !== job || !wanted || announcement || current !== job.element || idx !== job.index) return;
+    if (!current.paused && current.currentTime > job.position + 1) return;
+    job.attempts++;
+    window.RadioDiagnostics?.record('resume-retry', {attempt:job.attempts, position:current.currentTime});
+    playCurrent();
+  }, 250);
+}
+function protectBulletinReturn() {
+  cancelPostBulletin();
+  const job = {element:current, index:idx, position:current.currentTime, attempts:0, retry:null, timer:null};
+  postBulletin = job;
+  job.timer = setTimeout(() => {
+    if (postBulletin !== job) return;
+    const resumed = !current.paused && current.currentTime > job.position + 1;
+    window.RadioDiagnostics?.record('resume-result', {ok:resumed, position:current.currentTime});
+    cancelPostBulletin();
+    if (!resumed && wanted && !announcement && current === job.element && idx === job.index) {
+      pauseProgram();
+      status('Não foi possível retomar a faixa. Toque em Ouvir para continuar do mesmo ponto.');
+    }
+  }, 5000);
+}
+function releaseBulletinAudio() {
+  bulletinAudio.pause();
+  bulletinAudio.removeAttribute('src');
+  bulletinAudio.load();
+}
+
 function playCurrent(fallbackElement = null) {
   if (!wanted || announcement) return;
   if (current.error) prepare(current, idx, true);
@@ -187,6 +228,8 @@ function playCurrent(fallbackElement = null) {
   }).catch(error => {
     if (sequence !== playSequence || element !== current || !wanted || announcement) return;
     pendingPlay = false;
+    window.RadioDiagnostics?.record('music-play-error', {error:error?.name, position:current.currentTime});
+    if (postBulletin) { retryPostBulletin(); return; }
     if (error.name === 'NotAllowedError') {
       if (fallbackElement && fallbackElement !== current) {
         singleDeck = true;
@@ -207,6 +250,7 @@ function playCurrent(fallbackElement = null) {
 }
 
 function activate(index, reuse = null, seek = 0) {
+  cancelPostBulletin();
   cancelRecovery();
   clearTimeout(failureTimer);
   failureTimer = null;
@@ -276,6 +320,7 @@ function observePlayback() {
 }
 
 function failTrack(element) {
+  if (element === current && postBulletin && wanted && !announcement) { retryPostBulletin(); return; }
   if (element !== current || !wanted || announcement || failureTimer !== null) return;
   if (recovery) {
     // Um novo erro após a tentativa confirma a falha; não reinicia um ciclo infinito.
@@ -310,6 +355,7 @@ function failTrack(element) {
 }
 
 function pauseProgram() {
+  cancelPostBulletin();
   cancelRecovery();
   wanted = false;
   ++playSequence;
@@ -351,6 +397,11 @@ for (const element of [current, standby]) {
     controls();
   });
   element.addEventListener('pause', () => {
+    if (element === current && element.paused && wanted && !announcement && postBulletin) {
+      window.RadioDiagnostics?.record('resume-paused', {position:current.currentTime});
+      retryPostBulletin();
+      return;
+    }
     if (element === current && element.paused && wanted && !announcement && !pendingPlay && !element.ended && element.readyState >= 2) {
       if (isMobile && document.visibilityState === 'hidden') {
         // Pausas explícitas passam por pauseProgram(), que já remove wanted.
@@ -453,6 +504,7 @@ if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => 
 function beginAnnouncement(kind) {
   window.RadioDiagnostics?.record('announcement-request', {kind, busy:!!announcement});
   if (announcement) return null;
+  cancelPostBulletin();
   clearTimeout(failureTimer);
   failureTimer = null;
   cancelRecovery();
@@ -477,8 +529,9 @@ function cancelAnnouncement() {
   if (!job) return;
   job.cancelled = true;
   for (const cleanup of [...job.cleanups]) cleanup();
+  if (job.backgroundAudio) releaseBulletinAudio();
+  else bulletinAudio.pause();
   announcement = null;
-  bulletinAudio.pause();
   if (nativeTTSAvailable()) {
     try { window.speechSynthesis.cancel(); } catch (_) {}
   }
@@ -487,11 +540,13 @@ function cancelAnnouncement() {
 function finishAnnouncement(job) {
   if (announcement !== job || job.cancelled) return;
   for (const cleanup of [...job.cleanups]) cleanup();
+  if (job.backgroundAudio) releaseBulletinAudio();
+  else bulletinAudio.pause();
   announcement = null;
-  bulletinAudio.pause();
   if (wanted) {
     if (current.ended) advanceProgram();
     else {
+      if (job.backgroundAudio) protectBulletinReturn();
       window.RadioDiagnostics?.record('music-resume-request', {position:current.currentTime, paused:current.paused});
       playCurrent();
     }
@@ -1072,6 +1127,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 

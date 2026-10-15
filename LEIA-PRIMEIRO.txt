@@ -1,14 +1,15 @@
-LEIA PRIMEIRO — RETOMADA APÓS BOLETIM
+LEIA PRIMEIRO — TRANSIÇÃO DO BOLETIM PARA A MÚSICA
 
-Extraia o ZIP. Envie somente app.js, diagnostics.js, index.html e sw.js para a raiz do repositório radio-transito-sp, substituindo os quatro arquivos. Não envie o ZIP diretamente. Não precisa alterar artesp ou media. Preserve a rota /voz da versão 38, que já funcionou no seu teste.
+Extraia e envie app.js, diagnostics.js, index.html e sw.js para a raiz do repositório, substituindo os quatro arquivos. Não envie o ZIP diretamente. Não precisa alterar artesp ou media. A rota /voz que funcionou permanece igual.
 
-A música permanece carregada e pausada em seu próprio reprodutor. O aviso toca no elemento separado usando o áudio validado pelo servidor. Ao terminar, a música apenas continua, sem recarregar nem reposicionar o arquivo. Não há música de fundo durante o boletim.
+Ajustes: libera o arquivo e os recursos do reprodutor do boletim antes de retornar à música. Durante cinco segundos após o aviso, uma pausa na retomada recebe até três tentativas adicionais na mesma faixa. Essa transição não entra na recuperação que pula arquivos.
 
-Preservados: fonte de voz validada, acervo, programação, horários, previsão, notícias e trânsito. O caminho de voz nativa com tela ligada continua igual.
+Se mesmo assim a retomada falhar, a rádio ficará pausada na mesma faixa com mensagem para tocar em Ouvir, sem continuar saltando entre músicas. Isso é uma proteção, não uma garantia de que o bloqueio do aparelho foi resolvido.
 
-32 testes simulados passaram, incluindo manutenção de arquivo, posição e buffer, pausa manual, próxima faixa e falha do áudio do boletim. Ainda é necessário confirmar no Samsung com tela apagada.
+Preservados: músicas, podcasts, programação, horários, fontes, voz e pausa durante os boletins. Pausar e Próxima cancelam tentativas pendentes.
 
-Teste: abra a rádio atualizada, inicie e mantenha a tela apagada até o próximo anúncio da hora (minutos 00, 10, 20, 30, 40 ou 50). Confira tanto a leitura quanto a volta da música.
+38 testes simulados passaram, incluindo pausa logo após começar a música, falha persistente, limite de tentativas e comandos durante a retomada. Sem teste físico no Samsung.
 
-Se falhar, baixe o registro no mesmo navegador:
+Teste com tela apagada até um anúncio da hora; confira a voz e a continuidade da música. Se falhar, baixe o diagnóstico no mesmo navegador:
 https://lazarowww86-droid.github.io/radio-transito-sp/?diagnostico=1
+O novo registro distingue tentativas, erros e resultado da retomada.
