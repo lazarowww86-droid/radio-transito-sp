@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { TrafficGateway } from './traffic.mjs';
 import { NewsGateway } from './news.mjs';
 import { RoadsGateway } from './roads.mjs';
+import { voiceResponse } from './voice.mjs';
 
 export class ArtespStore extends DurableObject {
   constructor(ctx, env) { super(ctx, env); this.gateway = new TrafficGateway(ctx.storage, env); this.newsGateway = new NewsGateway(ctx.storage); this.roadsGateway = new RoadsGateway(ctx.storage); }
@@ -25,6 +26,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Vary': 'Origin' } });
     if (request.method !== 'GET') return reply({ error: 'Método não permitido.' }, 405, origin);
     const url = new URL(request.url);
+    if (url.pathname === '/voz') return voiceResponse(request, origin);
     if (url.pathname === '/rodovias') {
       if (url.search) return reply({ error: 'Use apenas /rodovias.' }, 400, origin);
       try {
@@ -53,4 +55,5 @@ export default {
     }
   }
 };
+
 

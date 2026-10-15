@@ -25,7 +25,7 @@
   button.style.cssText = 'display:block;margin:20px auto;padding:14px;border-radius:10px;background:#0dd5c2;color:#07101d;font-weight:bold';
   button.addEventListener('click', () => {
     record('export');
-    const url = URL.createObjectURL(new Blob([JSON.stringify({build:'20261014-r37-background-voice', entries}, null, 2)], {type:'application/json'}));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({build:'20261014-r38-voice-source', entries}, null, 2)], {type:'application/json'}));
     const link = document.createElement('a');
     link.href = url; link.download = 'diagnostico-radio.json'; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);

@@ -1,19 +1,17 @@
-LEIA PRIMEIRO — CORREÇÃO DA VOZ COM A TELA APAGADA
+LEIA PRIMEIRO — ROTA DE VOZ NO SERVIDOR
 
-1. Extraia o ZIP. Envie app.js, diagnostics.js, index.html e sw.js para a raiz do repositório radio-transito-sp, substituindo os quatro arquivos. Não envie o ZIP diretamente. Não precisa enviar media nem artesp.
+Extraia o ZIP. Envie à raiz do GitHub os quatro arquivos app.js, diagnostics.js, index.html e sw.js, e a pasta artesp incluída. Dentro de artesp há somente worker.mjs (substituir) e voice.mjs (novo). Preserve todos os demais arquivos que já estão na pasta artesp do repositório. Não exclua nem substitua a pasta inteira por uma pasta vazia; acrescente/substitua somente os dois arquivos. Não precisa enviar media.
 
-O diagnóstico real registrou o anúncio da hora às 21h40 e a falha synthesis-failed na voz nativa com a página oculta.
+Aguarde o GitHub Pages e o build automático do Cloudflare terminarem. A atualização do site sozinha não basta: /voz precisa estar publicado no Worker.
 
-Mudança: no celular com a tela apagada, os avisos usam áudio em português pelo mesmo reprodutor das músicas. Ao terminar, a faixa e sua posição são restauradas. A música não toca de fundo durante o aviso.
+Verificação rápida do servidor: abra
+https://radio-transito-sp.lazarowww86.workers.dev/voz?q=Teste%20de%20voz%20da%20R%C3%A1dio%20Tr%C3%A2nsito%20SP.
+Deve abrir um áudio. Se mostrar erro, informe a mensagem antes de outro teste de 12 minutos.
 
-Com a tela ligada, o caminho de voz nativa permanece igual. O áudio alternativo em segundo plano pode ter timbre diferente e depende da conexão e da disponibilidade do serviço externo já usado na rádio.
+A mudança entrega áudio pelo servidor da rádio, validando tipo e assinatura de MP3. Com tela apagada usa esse endereço no reprodutor ativo e restaura a música no mesmo ponto. Voz nativa com tela ligada, horários, fontes, acervo e pausas permanecem preservados.
 
-Preservados: acervo, programação, notícias, trânsito, previsão, horários e correção das trocas de faixa com tela apagada.
+41 testes automatizados simulados passaram; rota testada também no runtime local do Cloudflare. O serviço externo retornou um MP3, decodificado no teste local. Ainda é necessária confirmação no Samsung e no Worker publicado. A obtenção da voz continua dependendo do serviço externo; este pacote não elimina essa dependência.
 
-Validação: 35 testes simulados passaram. Teste de conexão do serviço retornou MP3. Ainda não houve teste físico no Samsung; não é garantia de funcionamento em todos os aparelhos.
-
-Teste: após carregar a atualização, inicie a rádio e apague a tela por 12 minutos. Deve atravessar pelo menos um horário de anúncio da hora. Para conferir o registro, use no MESMO navegador:
+Se o teste do servidor funcionar, inicie a rádio com
 https://lazarowww86-droid.github.io/radio-transito-sp/?diagnostico=1
-Depois acenda a tela, baixe o diagnóstico e envie no chat se não houver leitura.
-
-Guarde o pacote 35 como retorno à versão com músicas confirmadas pelo seu teste.
+Deixe a tela apagada por 12 minutos. Se falhar, acenda a tela e baixe o diagnóstico.

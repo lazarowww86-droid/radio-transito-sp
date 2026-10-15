@@ -578,7 +578,9 @@ function splitIntoChunks(text, maxLen = 165) {
 async function speakViaAudioFallback(text, job) {
   const audio = announcementAudio(job);
   const chunks = splitIntoChunks(text, 165);
-  const endpoints = [
+  const endpoints = audio === current ? [
+    q => `https://radio-transito-sp.lazarowww86.workers.dev/voz?q=${encodeURIComponent(q)}`
+  ] : [
     q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=pt-BR&q=${encodeURIComponent(q)}`,
     q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=tw-ob&tl=pt-BR&q=${encodeURIComponent(q)}`
   ];
@@ -608,7 +610,7 @@ async function speakViaAudioFallback(text, job) {
           clearTimeout(timer);
           timer = setTimeout(cancel, 25000);
         };
-        timer = setTimeout(cancel, 6000);
+        timer = setTimeout(cancel, audio === current ? 10000 : 6000);
         audio.muted = false;
         audio.referrerPolicy = 'no-referrer';
         audio.setAttribute('referrerpolicy', 'no-referrer');
@@ -1094,6 +1096,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 
