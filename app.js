@@ -367,14 +367,14 @@ for (const element of [current, standby]) {
     if (element === current && wanted && !announcement) status('Carregando o áudio…');
   });
   element.addEventListener('loadedmetadata', () => {
-    if (element !== current) return;
+    if (element !== current || announcement?.audioElement === element) return;
     const offset = Number(element.dataset.startOffset || 0);
     if (offset > 0) element.currentTime = Math.min(offset, Math.max(0, element.duration - 0.1));
     element.dataset.startOffset = '0';
     progress();
   });
   element.addEventListener('timeupdate', () => {
-    if (element !== current) return;
+    if (element !== current || announcement?.audioElement === element) return;
     window.RadioDiagnostics?.progress({position:current.currentTime, paused:current.paused});
     observePlayback();
     progress();
@@ -466,12 +466,44 @@ function beginAnnouncement(kind) {
   return job;
 }
 
+// A voz em segundo plano usa o mesmo reprodutor autorizado para as músicas.
+// O arquivo e a posição da programação são restaurados antes de encerrar o aviso.
+function announcementAudio(job) {
+  if (job.audioElement) return job.audioElement;
+  if (!isMobile || document.visibilityState !== 'hidden') return bulletinAudio;
+  job.musicSnapshot = { element: current, src: current.src, position: current.currentTime,
+    index: idx, source: current.dataset.source };
+  job.audioElement = current;
+  return current;
+}
+
+function restoreAnnouncementAudio(job) {
+  const saved = job.musicSnapshot;
+  if (!saved) return;
+  const element = saved.element;
+  delete job.musicSnapshot;
+  delete job.audioElement;
+  element.pause();
+  element.src = saved.src;
+  element.dataset.source = saved.source;
+  element.dataset.index = String(saved.index);
+  element.dataset.startOffset = String(saved.position);
+  element.load();
+  if (element.readyState >= 1) {
+    try { element.currentTime = saved.position; } catch (_) {}
+  }
+  lastPosition = saved.position;
+  lastProgress = Date.now();
+  window.RadioDiagnostics?.record('music-restored', {kind:job.kind, position:saved.position});
+}
+
 function cancelAnnouncement() {
   const job = announcement;
   if (!job) return;
-  announcement = null;
   job.cancelled = true;
   for (const cleanup of [...job.cleanups]) cleanup();
+  restoreAnnouncementAudio(job);
+  announcement = null;
   bulletinAudio.pause();
   if (nativeTTSAvailable()) {
     try { window.speechSynthesis.cancel(); } catch (_) {}
@@ -480,8 +512,9 @@ function cancelAnnouncement() {
 
 function finishAnnouncement(job) {
   if (announcement !== job || job.cancelled) return;
-  announcement = null;
   for (const cleanup of [...job.cleanups]) cleanup();
+  restoreAnnouncementAudio(job);
+  announcement = null;
   bulletinAudio.pause();
   if (wanted) {
     if (current.ended) advanceProgram();
@@ -543,6 +576,7 @@ function splitIntoChunks(text, maxLen = 165) {
 
 // Reproduz a voz pelo elemento <audio id="bulletin-audio"> com no-referrer (evita bloqueio 403 no telemóvel)
 async function speakViaAudioFallback(text, job) {
+  const audio = announcementAudio(job);
   const chunks = splitIntoChunks(text, 165);
   const endpoints = [
     q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=pt-BR&q=${encodeURIComponent(q)}`,
@@ -557,29 +591,31 @@ async function speakViaAudioFallback(text, job) {
         let settled = false, timer;
         const finish = result => {
           if (settled) return;
+          window.RadioDiagnostics?.record('fallback-finish', {kind:job.kind, ok:result, mainPlayer:audio === current});
           settled = true;
           clearTimeout(timer);
-          bulletinAudio.onended = bulletinAudio.onerror = bulletinAudio.onplaying = null;
-          bulletinAudio.pause();
+          audio.onended = audio.onerror = audio.onplaying = null;
+          audio.pause();
           job.cleanups.delete(cancel);
           resolve(result);
         };
         const cancel = () => finish(false);
         job.cleanups.add(cancel);
-        bulletinAudio.onended = () => finish(true);
-        bulletinAudio.onerror = cancel;
-        bulletinAudio.onplaying = () => {
+        audio.onended = () => finish(true);
+        audio.onerror = () => { window.RadioDiagnostics?.record('fallback-error', {kind:job.kind, code:audio.error?.code}); cancel(); };
+        audio.onplaying = () => {
+          window.RadioDiagnostics?.record('fallback-playing', {kind:job.kind, mainPlayer:audio === current});
           clearTimeout(timer);
           timer = setTimeout(cancel, 25000);
         };
         timer = setTimeout(cancel, 6000);
-        bulletinAudio.muted = false;
-        bulletinAudio.referrerPolicy = 'no-referrer';
-        bulletinAudio.setAttribute('referrerpolicy', 'no-referrer');
-        bulletinAudio.removeAttribute('crossorigin');
-        bulletinAudio.src = makeUrl(chunk);
-        bulletinAudio.load();
-        Promise.resolve(bulletinAudio.play()).catch(cancel);
+        audio.muted = false;
+        audio.referrerPolicy = 'no-referrer';
+        audio.setAttribute('referrerpolicy', 'no-referrer');
+        audio.removeAttribute('crossorigin');
+        audio.src = makeUrl(chunk);
+        audio.load();
+        Promise.resolve(audio.play()).catch(error => { window.RadioDiagnostics?.record('fallback-rejected', {kind:job.kind, error:error?.name}); cancel(); });
       });
       if (ok) {
         chunkSpoken = true;
@@ -663,6 +699,12 @@ async function speakText(text, job) {
   if (job.cancelled || announcement !== job) return false;
 
   window.RadioDiagnostics?.record('voice-request', {kind:job.kind});
+  // O diagnóstico real confirmou falha da voz nativa com a tela apagada.
+  // Em primeiro plano, preserva o mecanismo que já funciona.
+  if (isMobile && (document.visibilityState === 'hidden' || job.audioElement)) {
+    window.RadioDiagnostics?.record('background-audio', {kind:job.kind});
+    return speakViaAudioFallback(clean, job);
+  }
   const nativeOk = await speakNative(clean, job);
   if (nativeOk) return true;
   if (job.cancelled || announcement !== job) return false;
@@ -1052,5 +1094,6 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
