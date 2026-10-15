@@ -367,14 +367,14 @@ for (const element of [current, standby]) {
     if (element === current && wanted && !announcement) status('Carregando o áudio…');
   });
   element.addEventListener('loadedmetadata', () => {
-    if (element !== current || announcement?.audioElement === element) return;
+    if (element !== current) return;
     const offset = Number(element.dataset.startOffset || 0);
     if (offset > 0) element.currentTime = Math.min(offset, Math.max(0, element.duration - 0.1));
     element.dataset.startOffset = '0';
     progress();
   });
   element.addEventListener('timeupdate', () => {
-    if (element !== current || announcement?.audioElement === element) return;
+    if (element !== current) return;
     window.RadioDiagnostics?.progress({position:current.currentTime, paused:current.paused});
     observePlayback();
     progress();
@@ -466,35 +466,10 @@ function beginAnnouncement(kind) {
   return job;
 }
 
-// A voz em segundo plano usa o mesmo reprodutor autorizado para as músicas.
-// O arquivo e a posição da programação são restaurados antes de encerrar o aviso.
+// Mantém a música carregada e pausada: o aviso usa seu próprio elemento.
 function announcementAudio(job) {
-  if (job.audioElement) return job.audioElement;
-  if (!isMobile || document.visibilityState !== 'hidden') return bulletinAudio;
-  job.musicSnapshot = { element: current, src: current.src, position: current.currentTime,
-    index: idx, source: current.dataset.source };
-  job.audioElement = current;
-  return current;
-}
-
-function restoreAnnouncementAudio(job) {
-  const saved = job.musicSnapshot;
-  if (!saved) return;
-  const element = saved.element;
-  delete job.musicSnapshot;
-  delete job.audioElement;
-  element.pause();
-  element.src = saved.src;
-  element.dataset.source = saved.source;
-  element.dataset.index = String(saved.index);
-  element.dataset.startOffset = String(saved.position);
-  element.load();
-  if (element.readyState >= 1) {
-    try { element.currentTime = saved.position; } catch (_) {}
-  }
-  lastPosition = saved.position;
-  lastProgress = Date.now();
-  window.RadioDiagnostics?.record('music-restored', {kind:job.kind, position:saved.position});
+  if (isMobile && document.visibilityState === 'hidden') job.backgroundAudio = true;
+  return bulletinAudio;
 }
 
 function cancelAnnouncement() {
@@ -502,7 +477,6 @@ function cancelAnnouncement() {
   if (!job) return;
   job.cancelled = true;
   for (const cleanup of [...job.cleanups]) cleanup();
-  restoreAnnouncementAudio(job);
   announcement = null;
   bulletinAudio.pause();
   if (nativeTTSAvailable()) {
@@ -513,12 +487,14 @@ function cancelAnnouncement() {
 function finishAnnouncement(job) {
   if (announcement !== job || job.cancelled) return;
   for (const cleanup of [...job.cleanups]) cleanup();
-  restoreAnnouncementAudio(job);
   announcement = null;
   bulletinAudio.pause();
   if (wanted) {
     if (current.ended) advanceProgram();
-    else playCurrent();
+    else {
+      window.RadioDiagnostics?.record('music-resume-request', {position:current.currentTime, paused:current.paused});
+      playCurrent();
+    }
   } else {
     controls();
     status('Programação pausada. Toque em Ouvir para continuar.');
@@ -578,7 +554,7 @@ function splitIntoChunks(text, maxLen = 165) {
 async function speakViaAudioFallback(text, job) {
   const audio = announcementAudio(job);
   const chunks = splitIntoChunks(text, 165);
-  const endpoints = audio === current ? [
+  const endpoints = job.backgroundAudio ? [
     q => `https://radio-transito-sp.lazarowww86.workers.dev/voz?q=${encodeURIComponent(q)}`
   ] : [
     q => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=pt-BR&q=${encodeURIComponent(q)}`,
@@ -610,7 +586,7 @@ async function speakViaAudioFallback(text, job) {
           clearTimeout(timer);
           timer = setTimeout(cancel, 25000);
         };
-        timer = setTimeout(cancel, audio === current ? 10000 : 6000);
+        timer = setTimeout(cancel, job.backgroundAudio ? 10000 : 6000);
         audio.muted = false;
         audio.referrerPolicy = 'no-referrer';
         audio.setAttribute('referrerpolicy', 'no-referrer');
@@ -703,7 +679,7 @@ async function speakText(text, job) {
   window.RadioDiagnostics?.record('voice-request', {kind:job.kind});
   // O diagnóstico real confirmou falha da voz nativa com a tela apagada.
   // Em primeiro plano, preserva o mecanismo que já funciona.
-  if (isMobile && (document.visibilityState === 'hidden' || job.audioElement)) {
+  if (isMobile && (document.visibilityState === 'hidden' || job.backgroundAudio)) {
     window.RadioDiagnostics?.record('background-audio', {kind:job.kind});
     return speakViaAudioFallback(clean, job);
   }
@@ -1096,6 +1072,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 
