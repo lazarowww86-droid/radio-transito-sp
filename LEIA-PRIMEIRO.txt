@@ -1,11 +1,14 @@
-LEIA PRIMEIRO — TELA APAGADA
+LEIA PRIMEIRO — DIAGNÓSTICO DOS AVISOS
 
-Extraia este ZIP. Envie app.js, index.html e sw.js para a raiz do repositório radio-transito-sp, substituindo os três arquivos. Não envie o ZIP diretamente. Não precisa enviar media nem artesp.
+Este pacote registra a falha; ainda não corrige os avisos com tela apagada. Preserva o ajuste da versão 35 para músicas e as pausas dos boletins.
 
-Alteração: reutiliza o reprodutor ativo na troca de faixa com a tela apagada no celular. Tenta retomar uma pausa inesperada em segundo plano sem confundi-la com o botão Pausar.
+1. Extraia o ZIP. Envie os quatro arquivos app.js, diagnostics.js, index.html e sw.js à raiz do repositório, substituindo os existentes. Não envie media nem artesp.
+2. Após publicar, no MESMO navegador do Samsung onde faz o teste, abra:
+https://lazarowww86-droid.github.io/radio-transito-sp/?diagnostico=1
+3. Confira se existe o botão Baixar diagnóstico no fim da página. Se não aparecer, a atualização ainda não carregou.
+4. Toque em Ouvir e apague a tela. Deixe tocar por 12 minutos (assim atravessa pelo menos um horário de anúncio da hora). Não feche a rádio.
+5. Acenda a tela e, na mesma página, toque em Baixar diagnóstico. Envie o arquivo diagnostico-radio.json neste chat.
 
-Preservados: músicas, podcasts, horários, fontes, voz e pausas dos boletins. A música continua pausada durante os avisos.
+O diagnóstico registra visibilidade da página, posição do áudio, execução do agendamento, pedido de voz, início/fim/erro da voz nativa e tentativa de voz alternativa. Não grava o texto dos boletins. O histórico é local e limitado aos últimos 600 eventos.
 
-Validação: 24 testes automatizados com reprodução simulada passaram. Não houve teste físico no Samsung. A correção não garante que o Android nunca suspenda o navegador.
-
-Teste após atualizar: deixe a tela apagada por duas músicas completas; verifique também um boletim e o botão Pausar da tela de bloqueio.
+29 testes simulados passaram. Sem teste físico no Samsung.

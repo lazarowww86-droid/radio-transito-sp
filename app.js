@@ -375,6 +375,7 @@ for (const element of [current, standby]) {
   });
   element.addEventListener('timeupdate', () => {
     if (element !== current) return;
+    window.RadioDiagnostics?.progress({position:current.currentTime, paused:current.paused});
     observePlayback();
     progress();
   });
@@ -450,6 +451,7 @@ if ($('weather-voice')) {$('weather-voice').addEventListener('change', event => 
 }
 
 function beginAnnouncement(kind) {
+  window.RadioDiagnostics?.record('announcement-request', {kind, busy:!!announcement});
   if (announcement) return null;
   clearTimeout(failureTimer);
   failureTimer = null;
@@ -597,6 +599,7 @@ function speakNative(clean, job) {
     let settled = false, started = false, timer, poll;
     const finish = ok => {
       if (settled) return;
+      window.RadioDiagnostics?.record('native-finish', {kind:job.kind, ok, started});
       settled = true;
       clearTimeout(timer);
       clearInterval(poll);
@@ -621,6 +624,7 @@ function speakNative(clean, job) {
     const markStarted = () => {
       if (started) return;
       started = true;
+      window.RadioDiagnostics?.record('native-start', {kind:job.kind});
       clearTimeout(timer);
       timer = setTimeout(cancel, Math.min(180000, Math.max(15000, clean.length / 7 * 1000 + 6000)));
     };
@@ -628,6 +632,7 @@ function speakNative(clean, job) {
     utterance.onstart = markStarted;
     utterance.onend = () => finish(true);
     utterance.onerror = event => {
+      window.RadioDiagnostics?.record('native-error', {kind:job.kind, error:event?.error});
       if (event && (event.error === 'interrupted' || event.error === 'canceled')) {
         if (started) { finish(true); return; }
       }
@@ -657,11 +662,13 @@ async function speakText(text, job) {
   if (!clean) return true;
   if (job.cancelled || announcement !== job) return false;
 
+  window.RadioDiagnostics?.record('voice-request', {kind:job.kind});
   const nativeOk = await speakNative(clean, job);
   if (nativeOk) return true;
   if (job.cancelled || announcement !== job) return false;
 
   job.useAudioFallback = true;
+  window.RadioDiagnostics?.record('audio-fallback', {kind:job.kind});
   return speakViaAudioFallback(clean, job);
 }
 
@@ -912,6 +919,7 @@ function timeText(parts) {
     (minute ? ` e ${minute} ${minute === 1 ? 'minuto' : 'minutos'}` : '') + '.';
 }
 function checkTimeAnnouncement() {
+  window.RadioDiagnostics?.record('scheduler', {wanted, paused:current.paused, pendingPlay, ready:current.readyState, announcement:announcement?.kind || null, position:current.currentTime});
   if (!wanted || current.paused || pendingPlay || current.readyState < 2 || announcement) return;
   const parts = radioTime();
   if (Number(parts.minute) % 10 !== 0) return;
@@ -1044,4 +1052,5 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
