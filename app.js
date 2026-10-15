@@ -433,6 +433,7 @@ for (const element of [current, standby]) {
 }
 
 setInterval(() => {
+  announcement?.audioCheck?.();
   if (!wanted || announcement) return;
   observePlayback();
   if (!current.ended && !recovery && Date.now() - lastProgress > 12000) failTrack(current);
@@ -621,12 +622,29 @@ async function speakViaAudioFallback(text, job) {
     for (const makeUrl of endpoints) {
       if (job.cancelled || announcement !== job) return false;
       const ok = await new Promise(resolve => {
-        let settled = false, timer;
+        let settled = false, timer, started = false;
+        let deadline = Date.now() + (job.backgroundAudio ? 10000 : 6000);
+        let lastAudioPosition = 0, lastAudioProgress = Date.now();
+        const check = () => {
+          if (settled) return;
+          const now = Date.now(), position = audio.currentTime;
+          if (started && audio.ended) { finish(true); return; }
+          if (started && Number.isFinite(position) && position > lastAudioPosition + 0.05) {
+            lastAudioPosition = position;
+            lastAudioProgress = now;
+          }
+          if (now >= deadline || (started && now - lastAudioProgress >= 10000)) {
+            window.RadioDiagnostics?.record('voice-stalled', {kind:job.kind, position, paused:audio.paused, ready:audio.readyState});
+            finish(false);
+          }
+        };
+        job.audioCheck = check;
         const finish = result => {
           if (settled) return;
           window.RadioDiagnostics?.record('fallback-finish', {kind:job.kind, ok:result, mainPlayer:audio === current});
           settled = true;
           clearTimeout(timer);
+          if (job.audioCheck === check) delete job.audioCheck;
           audio.onended = audio.onerror = audio.onplaying = null;
           audio.pause();
           job.cleanups.delete(cancel);
@@ -638,8 +656,13 @@ async function speakViaAudioFallback(text, job) {
         audio.onerror = () => { window.RadioDiagnostics?.record('fallback-error', {kind:job.kind, code:audio.error?.code}); cancel(); };
         audio.onplaying = () => {
           window.RadioDiagnostics?.record('fallback-playing', {kind:job.kind, mainPlayer:audio === current});
-          clearTimeout(timer);
-          timer = setTimeout(cancel, 25000);
+          if (!started) {
+            started = true;
+            deadline = Date.now() + 30000;
+            lastAudioProgress = Date.now();
+            clearTimeout(timer);
+            timer = setTimeout(check, 30000);
+          }
         };
         timer = setTimeout(cancel, job.backgroundAudio ? 10000 : 6000);
         audio.muted = false;
@@ -994,6 +1017,7 @@ function timeText(parts) {
     (minute ? ` e ${minute} ${minute === 1 ? 'minuto' : 'minutos'}` : '') + '.';
 }
 function checkTimeAnnouncement() {
+  announcement?.audioCheck?.();
   window.RadioDiagnostics?.record('scheduler', {wanted, paused:current.paused, pendingPlay, ready:current.readyState, announcement:announcement?.kind || null, position:current.currentTime});
   if (!wanted || current.paused || pendingPlay || current.readyState < 2 || announcement) return;
   const parts = radioTime();
