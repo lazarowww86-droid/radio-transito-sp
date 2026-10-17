@@ -10,7 +10,7 @@ function local(now = Date.now()) {
   return { date: `${p.year}-${p.month}-${p.day}`, day: Math.floor(Date.UTC(+p.year, +p.month - 1, +p.day) / 86400000),
     seconds: +p.hour * 3600 + +p.minute * 60 + +p.second };
 }
-function create(music, podcasts, random = Math.random) {
+function create(music, podcasts, random = Math.random, weekly = []) {
   if (!music.length || !podcasts.length) throw new Error('Programação vazia');
   let queue = [], history = [], cursor = -1, last = null;
   const seen = new Set();
@@ -54,6 +54,13 @@ function create(music, podcasts, random = Math.random) {
   }
   function slot(now = Date.now()) {
     const date = local(now), podcast = daily(now);
+    const weekday = ((date.day + 4) % 7 + 7) % 7;
+    for (const track of weekly) {
+      const offset = date.seconds - track.minute * 60;
+      if (weekday === track.weekday && offset >= 0 && offset < track.duration) {
+        return { ...track, key: `${date.date}:weekly:${track.index}:${track.minute}`, offset };
+      }
+    }
     for (const minute of SLOTS) {
       const offset = date.seconds - minute * 60;
       if (offset >= 0 && offset < podcast.duration) return { ...podcast, key: `${date.date}:${minute}`, offset, minute };
@@ -68,8 +75,10 @@ function create(music, podcasts, random = Math.random) {
   }
   function upcoming(now = Date.now()) {
     const date = local(now), podcast = daily(now);
-    const minute = SLOTS.find(m => m * 60 > date.seconds);
-    return minute === undefined ? null : { ...podcast, inSeconds: minute * 60 - date.seconds, minute };
+    const weekday = ((date.day + 4) % 7 + 7) % 7;
+    const candidates = SLOTS.map(minute => ({...podcast, minute})).concat(weekly.filter(track => track.weekday === weekday));
+    const next = candidates.filter(track => track.minute * 60 > date.seconds).sort((a, b) => a.minute - b.minute)[0];
+    return next ? {...next, inSeconds: next.minute * 60 - date.seconds} : null;
   }
   return { next, peek, previous, daily, slot, claim, upcoming };
 }
@@ -77,3 +86,4 @@ const api = { create, local, SLOTS };
 if (typeof module === 'object' && module.exports) module.exports = api;
 else global.RadioProgramming = api;
 })(typeof window === 'object' ? window : globalThis);
+

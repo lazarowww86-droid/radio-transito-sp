@@ -1,16 +1,26 @@
-LEIA PRIMEIRO — ALANIS NA SELEÇÃO ALEATÓRIA
+RÁDIO TRÂNSITO SP — O IDIOTA
 
-1. Extraia o ZIP. Não envie o ZIP diretamente ao GitHub.
-2. Na raiz do repositório radio-transito-sp, envie music-tracks.js, index.html e sw.js, substituindo os três arquivos.
-3. Envie também a pasta media deste pacote. Ela contém apenas Alanis-Morissette-Mix-GitHub.mp3. Preserve todas as músicas que já existem na pasta media do GitHub; não apague a pasta.
-4. Aguarde a publicação do GitHub Pages. Depois abra novamente a rádio.
+COMO ENVIAR
+1. Extraia este ZIP no computador. Não envie o ZIP fechado.
+2. Abra a raiz do repositório radio-transito-sp no GitHub.
+3. Envie app.js, programming.js, index.html e sw.js, mantendo estes nomes e substituindo os arquivos existentes.
+4. Envie também a pasta media deste pacote a partir da raiz do repositório. Ela contém somente o novo áudio. Preserve todos os outros arquivos da pasta media já existente.
+5. Confirme em Commit changes e aguarde a publicação do GitHub Pages.
+Não é necessário enviar nem alterar a pasta artesp.
 
-Não precisa alterar app.js, programming.js, artesp nem os outros arquivos.
+PROGRAMAÇÃO
+Audiobooks — Resumos: O Idiota, de Fiódor Dostoiévski.
+Toda segunda-feira, às 12h30, no horário de Brasília.
+Áudio completo de aproximadamente 20 minutos, com 19,2 MB, sem nova compressão.
+O resumo não entra no sorteio musical. Ao terminar, a programação musical retorna.
+Quem entrar durante o horário do resumo acompanha a posição correspondente.
+A página recebe uma chamada visível para Audiobooks — Resumos.
 
-O mix foi cadastrado na seleção aleatória como uma faixa única, exibindo artista Alanis Morissette e título Seleção de sucessos — Mix completo. Não possui horário fixo e pode demorar a ser sorteado. As músicas dentro do mix continuam na ordem original do arquivo; não foram separadas.
+VERIFICAÇÃO DE HORÁRIOS
+Os podcasts continuam às 06h30, 12h00 e 18h30.
+Mesmo o maior dos quatro podcasts das 12h00 termina antes das 12h20, sem conflito com o resumo das 12h30.
+As 57 músicas e a seleção musical foram preservadas; music-tracks.js não precisa ser reenviado.
+As rotinas de voz, boletins e recuperação de áudio foram preservadas.
 
-As 56 faixas anteriores foram preservadas. Boletins, pausas e retomada da música permanecem iguais. Os podcasts continuam em 06:30, 12:00 e 18:30 e podem interromper o mix, conforme a programação que já existia.
-
-O MP3 tem 20.579.066 bytes (20,6 MB), abaixo do limite de 25 MiB por arquivo no envio pelo site. Mantém 1h54min19s completos, em mono e qualidade reduzida.
-
-Preparado sobre o commit 3669c54d6791732628bb2040ffee5d98d788f486. Verificado: 57 entradas na seleção, anteriores intactas, mix presente no sorteio sem repetição, caminho do arquivo correto e horários dos podcasts preservados. Não foi publicado diretamente por este chat.
+VALIDAÇÃO
+57 testes automatizados passaram, incluindo horário de Brasília, repetição semanal, ausência de conflito, retorno à música e regressões de reprodução e voz. Não houve teste físico no Samsung.

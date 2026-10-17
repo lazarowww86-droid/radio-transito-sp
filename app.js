@@ -41,10 +41,15 @@ const podcasts = [
  {type:'podcast',title:'Chico Picadinho: por que continua preso?',artist:'Histórias que Marcaram',src:'media/chico-picadinho.mp3',duration:601.783}
 ];
 const musicTracks = window.RadioMusicTracks;
-const playlist = [...musicTracks, ...podcasts];
+const audiobooks = [
+ {type:'audiobook',title:'O Idiota — Resumo',artist:'Fiódor Dostoiévski • Audiobooks — Resumos',src:'media/o-idiota-resumo.mp3',duration:1199.986939,weekday:1,minute:750}
+];
+const playlist = [...musicTracks, ...podcasts, ...audiobooks];
 const programming = window.RadioProgramming.create(
   musicTracks.map((_, i) => i),
-  podcasts.map((track, i) => ({index: musicTracks.length + i, duration: track.duration}))
+  podcasts.map((track, i) => ({index: musicTracks.length + i, duration: track.duration})),
+  Math.random,
+  audiobooks.map((track, i) => ({index: musicTracks.length + podcasts.length + i, duration: track.duration, weekday:track.weekday, minute:track.minute}))
 );
 
 // O estado do botão representa a intenção do ouvinte, inclusive durante avisos.
@@ -99,7 +104,7 @@ function trackInfo() {
   $('track').textContent = track.title;
   $('artist').textContent = track.artist;
   $('next-title').textContent = next.title;
-  $('next-type').textContent = next.type === 'podcast' ? 'Podcast • Histórias que Marcaram' : next.type === 'music' ? 'Música • seleção musical' : 'Identificação da Rádio Trânsito SP';
+  $('next-type').textContent = next.type === 'podcast' ? 'Podcast • Histórias que Marcaram' : next.type === 'audiobook' ? 'Audiobooks — Resumos' : next.type === 'music' ? 'Música • seleção musical' : 'Identificação da Rádio Trânsito SP';
   if ('mediaSession' in navigator && 'MediaMetadata' in window) {
     navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist, album: 'Rádio Trânsito SP' });
   }
@@ -1064,7 +1069,7 @@ if ('mediaSession' in navigator) {
 
 function advanceProgram() { activate(programming.next()); }
 function previousProgram() {
-  activate(programming.previous(playlist[idx].type === 'podcast'));
+  activate(programming.previous(['podcast', 'audiobook'].includes(playlist[idx].type)));
 }
 function syncSchedule() {
   const daily = programming.daily();
@@ -1169,6 +1174,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 
