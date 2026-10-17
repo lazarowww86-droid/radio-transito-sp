@@ -1,12 +1,16 @@
-LEIA PRIMEIRO — LEITURA DOS BOLETINS E PAUSAS ENTRE TRECHOS
+LEIA PRIMEIRO — ALANIS NA SELEÇÃO ALEATÓRIA
 
-Extraia o ZIP. Envie app.js, diagnostics.js, index.html e sw.js para a raiz do GitHub, substituindo os quatro arquivos. Não envie o ZIP diretamente. Não precisa enviar artesp nem media.
+1. Extraia o ZIP. Não envie o ZIP diretamente ao GitHub.
+2. Na raiz do repositório radio-transito-sp, envie music-tracks.js, index.html e sw.js, substituindo os três arquivos.
+3. Envie também a pasta media deste pacote. Ela contém apenas Alanis-Morissette-Mix-GitHub.mp3. Preserve todas as músicas que já existem na pasta media do GitHub; não apague a pasta.
+4. Aguarde a publicação do GitHub Pages. Depois abra novamente a rádio.
 
-Mudanças: se um trecho de voz inicia e pausa inesperadamente, tenta continuar o mesmo áudio da posição atual até duas vezes, sem recarregar ou repetir desde o início. Respeita Pausar e Próxima. Também junta frases curtas nos blocos de até 165 caracteres para reduzir mudanças de arquivo e esperas entre frases, mantendo as palavras e a pontuação do texto normal.
+Não precisa alterar app.js, programming.js, artesp nem os outros arquivos.
 
-Mantidas: voz nativa com tela ligada, rota /voz, acervo, programação, horários, notícias, previsão, trânsito, pausa da música durante aviso e proteções de retomada e travamento das versões 40/41. Se a voz continuar falhando, a proteção ainda pode encerrar a leitura e devolver a música.
+O mix foi cadastrado na seleção aleatória como uma faixa única, exibindo artista Alanis Morissette e título Seleção de sucessos — Mix completo. Não possui horário fixo e pode demorar a ser sorteado. As músicas dentro do mix continuam na ordem original do arquivo; não foram separadas.
 
-48 testes simulados passaram. Incluem pausa aos 0,11 segundo, continuação sem reload ou reinício, limite de tentativas, cancelamento e texto completo em vários blocos. Ainda é necessária confirmação no Samsung.
+As 56 faixas anteriores foram preservadas. Boletins, pausas e retomada da música permanecem iguais. Os podcasts continuam em 06:30, 12:00 e 18:30 e podem interromper o mix, conforme a programação que já existia.
 
-No próximo boletim rodoviário com tela apagada, confira se ele termina a leitura e a música volta. Se falhar, envie o registro baixado no mesmo navegador:
-https://lazarowww86-droid.github.io/radio-transito-sp/?diagnostico=1
+O MP3 tem 20.579.066 bytes (20,6 MB), abaixo do limite de 25 MiB por arquivo no envio pelo site. Mantém 1h54min19s completos, em mono e qualidade reduzida.
+
+Preparado sobre o commit 3669c54d6791732628bb2040ffee5d98d788f486. Verificado: 57 entradas na seleção, anteriores intactas, mix presente no sorteio sem repetição, caminho do arquivo correto e horários dos podcasts preservados. Não foi publicado diretamente por este chat.

@@ -1,4 +1,4 @@
-// Seleção musical: 56 músicas, com as anteriores preservadas.
+// Seleção musical: 57 músicas, com as anteriores preservadas.
 window.RadioMusicTracks = [
   {
     "type": "music",
@@ -335,5 +335,11 @@ window.RadioMusicTracks = [
     "title": "CD 3 — Faixa 20",
     "artist": "Artista não identificado",
     "src": "media/musicas3-20.mp3"
+  },
+  {
+      "type": "music",
+      "title": "Seleção de sucessos — Mix completo",
+      "artist": "Alanis Morissette",
+      "src": "media/Alanis-Morissette-Mix-GitHub.mp3"
   }
 ];
