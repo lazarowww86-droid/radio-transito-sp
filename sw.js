@@ -1,10 +1,15 @@
-const BUILD = '20261018-r51-volume-visual';
+const BUILD = '20261018-r52-selecoes-continuas';
 const MEDIA_BUILD = '20261013-r2-light';
+importScripts(`./album-streams.js?v=${BUILD}`);
+self.addEventListener('message', event => {
+  if (event.data?.type === 'RADIO_ALBUM_STREAMS') event.ports[0]?.postMessage({albumStreams:1});
+});
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);
 const SHELL = `${PREFIX}${SCOPE}-shell-${BUILD}`;
 const MEDIA = `${PREFIX}${SCOPE}-media-${MEDIA_BUILD}`;
 const CORE = [
+  `./album-streams.js?v=${BUILD}`,
   './', './index.html', `./styles.css?v=${BUILD}`, `./music-tracks.js?v=${BUILD}`, `./programming.js?v=${BUILD}`, `./weather.js?v=${BUILD}`, `./news.js?v=${BUILD}`, `./roads.js?v=${BUILD}`, `./app.js?v=${BUILD}`, `./diagnostics.js?v=${BUILD}`,
   './manifest.json', `./icon.svg?v=${BUILD}`, `./icon-192.png?v=${BUILD}`, `./icon-512.png?v=${BUILD}`, `./icon-maskable-512.png?v=${BUILD}`, `./apple-touch-icon.png?v=${BUILD}`
 ];
@@ -86,12 +91,15 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url), scope = new URL(self.registration.scope);
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
-  if (url.pathname.startsWith(new URL('./media/', scope).pathname)) {
+  if (self.RadioAlbumStreams.find(url.pathname, scope)) {
+    event.respondWith(self.RadioAlbumStreams.serve(request, scope));
+  } else if (url.pathname.startsWith(new URL('./media/', scope).pathname)) {
     event.respondWith(serveMedia(request));
   } else if (request.mode === 'navigate' || CORE.some(path => new URL(path, scope).pathname === url.pathname)) {
     event.respondWith(serveShell(request));
   }
 });
+
 
 
 

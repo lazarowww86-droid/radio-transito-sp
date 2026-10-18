@@ -1,7 +1,44 @@
-AJUSTE VISUAL DO VOLUME
+SELEÇÕES CONTÍNUAS — QUALIDADE ORIGINAL
 
-Extraia e envie styles.css, index.html e sw.js na raiz do GitHub, substituindo os mesmos nomes. Confirme em Commit changes.
-Não precisa enviar app.js, media, artesp nem outros arquivos.
+LEIA ANTES DE ENVIAR
+São 13 pacotes de áudio e um pacote final de atualização.
+Envie UM PACOTE POR VEZ e confirme cada envio em Commit changes.
+Sempre extraia o ZIP no computador. Não envie o ZIP fechado.
 
-Corrige o estilo ausente do pacote anterior: controle em formato de cápsula, botões circulares escuros e símbolos turquesa, acompanhando o visual da rádio. O comportamento do volume permanece igual.
-A versão dos arquivos foi atualizada para carregar o novo estilo. Aguarde a publicação e reabra a rádio.
+ENVIOS 01 A 13 — ÁUDIOS
+Abra a raiz do repositório radio-transito-sp no GitHub.
+Envie a pasta media extraída de cada pacote, incluindo a subpasta selecoes.
+Preserve os demais arquivos da pasta media. Não apague nada.
+Confirme em Commit changes antes de iniciar o próximo envio.
+Os arquivos .bin são partes de transporte do áudio. Não renomeie, não converta e não tente usá-los individualmente como músicas. A rádio reúne os bytes durante a reprodução.
+
+ENVIO 14 — FAÇA POR ÚLTIMO
+Depois dos 13 envios de áudio, envie na raiz do GitHub:
+app.js
+music-tracks.js
+index.html
+sw.js
+album-streams.js
+Confirme em Commit changes.
+Não precisa enviar programming.js, styles.css nem artesp.
+Aguarde a publicação e reabra a rádio para carregar a atualização.
+
+COMO FICOU
+- Alanis Morissette: seleção completa, aproximadamente 1h54min.
+- Pra Se Emocionar — 1987: seleção completa, aproximadamente 1h15min.
+- Seleção 89: aproximadamente 1h18min, com vinheta falada na abertura.
+Vinheta: Rádio Trânsito São Paulo. Seleção oitenta e nove. O rock que marcou gerações!
+Cada seleção aparece como um único bloco no sorteio. Não há sorteio entre pedaços de álbuns nem cortes de músicas nas divisões de envio. Ao terminar uma seleção, a rádio passa à próxima faixa ou seleção conforme o sorteio existente.
+Os boletins e os horários fixos de podcasts e audiobooks continuam funcionando como antes.
+
+QUALIDADE
+A música não foi recomprimida. Os dados de áudio originais foram preservados. A vinheta foi acrescentada na abertura da Seleção 89.
+Os arquivos pequenos de envio não representam cortes musicais: a reprodução percorre o áudio contínuo, inclusive quando a leitura passa de um arquivo de transporte a outro.
+Os antigos MP3 em partes podem continuar no GitHub; deixam de ser usados após esta atualização.
+A reprodução das seleções requer conexão para carregar seus arquivos. Não foi criado um modo offline novo para elas.
+
+PRESERVAÇÃO E TESTES
+68 testes automatizados passaram, incluindo os testes anteriores de voz e retomada, volume, horários, pausa e atualização do player.
+As três seleções completas foram decodificadas via HTTP com a nova leitura por intervalos, sem erros.
+Hashes confirmaram a reunião exata dos arquivos, sem lacunas nem repetições de bytes. A música original foi preservada sem recompressão.
+Nenhum teste físico no Samsung foi realizado nesta etapa.

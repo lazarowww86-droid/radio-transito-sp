@@ -98,6 +98,39 @@ let recovery = null, recoveryTimer = null;
 let postBulletin = null;
 const mediaCache = new Map(), preloads = new Map();
 const mediaURL = src => new URL(`${src}?v=${BUILD}`, document.baseURI).href;
+const streamedAlbums = new Set(musicTracks.filter(track => track.streamed).map(track => track.src));
+let albumTransportReady = false, albumTransportPromise = null;
+function ensureAlbumTransport() {
+  if (albumTransportReady) return Promise.resolve();
+  if (albumTransportPromise) return albumTransportPromise;
+  if (!navigator.serviceWorker || typeof MessageChannel === 'undefined') return Promise.reject(new Error('Reabra a rádio para carregar a seleção.'));
+  const sw = navigator.serviceWorker;
+  albumTransportPromise = new Promise((resolve,reject) => {
+    let done = false;
+    const channels = new Set();
+    const finish = ok => {
+      if (done) return;
+      done = true;
+      clearTimeout(deadline); clearInterval(poll);
+      sw.removeEventListener('controllerchange',ping);
+      for (const channel of channels) { channel.port1.close(); channel.port2.close(); }
+      if (ok) { albumTransportReady = true; resolve(); }
+      else reject(new Error('Reabra a rádio para carregar a seleção.'));
+    };
+    const ping = () => {
+      if (!sw.controller || done) return;
+      const channel = new MessageChannel(); channels.add(channel);
+      channel.port1.onmessage = event => { if (event.data?.albumStreams === 1) finish(true); };
+      try { sw.controller.postMessage({type:'RADIO_ALBUM_STREAMS'},[channel.port2]); } catch (_) {}
+    };
+    const deadline = setTimeout(() => finish(false),15000);
+    const poll = setInterval(ping,500);
+    sw.addEventListener('controllerchange',ping);
+    ping();
+  }).finally(() => { albumTransportPromise = null; });
+  return albumTransportPromise;
+}
+
 const wrap = i => (i + playlist.length) % playlist.length;
 const status = message => { $('player-status').textContent = message; };
 
@@ -149,6 +182,15 @@ function trackInfo() {
 function prepare(element, index, force = false) {
   const src = playlist[index].src;
   element.dataset.index = String(index);
+  if (streamedAlbums.has(src) && !albumTransportReady) {
+    if (element.dataset.source !== src || element.dataset.albumWaiting !== 'true') {
+      element.removeAttribute('src'); element.load();
+    }
+    element.dataset.source = src;
+    element.dataset.albumWaiting = 'true';
+    return;
+  }
+  if (element.dataset.albumWaiting === 'true') { force = true; delete element.dataset.albumWaiting; }
   if (!force && element.dataset.source === src && !element.error) {
     if (element.ended) element.currentTime = 0;
     return;
@@ -168,6 +210,7 @@ function preloadFollowing() {
 }
 
 function warmMedia(src) {
+  if (streamedAlbums.has(src)) return; // Pré-carregamento nativo por intervalos; não guarda o álbum inteiro na memória.
   if (mediaCache.has(src) || preloads.has(src)) return;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 45000);
@@ -250,6 +293,21 @@ function releaseBulletinAudio() {
 
 function playCurrent(fallbackElement = null) {
   if (!wanted || announcement) return;
+  if (streamedAlbums.has(playlist[idx].src) && !albumTransportReady) {
+    const element = current, sequence = ++playSequence;
+    pendingPlay = true;
+    status('Preparando a seleção musical…');
+    ensureAlbumTransport().then(() => {
+      if (sequence !== playSequence || element !== current || !wanted || announcement) return;
+      prepare(element,idx,true);
+      playCurrent(fallbackElement);
+    }).catch(() => {
+      if (sequence !== playSequence || element !== current || !wanted || announcement) return;
+      pendingPlay = false; wanted = false; controls();
+      status('Reabra a rádio para carregar a seleção ou escolha a próxima faixa.');
+    });
+    return;
+  }
   if (current.error) prepare(current, idx, true);
   const element = current, sequence = ++playSequence;
   pendingPlay = true;
@@ -358,6 +416,7 @@ function observePlayback() {
 }
 
 function failTrack(element) {
+  if (streamedAlbums.has(playlist[idx].src) && !albumTransportReady && pendingPlay) return;
   if (element === current && postBulletin && wanted && !announcement) { retryPostBulletin(); return; }
   if (element !== current || !wanted || announcement || failureTimer !== null) return;
   if (recovery) {
@@ -1208,6 +1267,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 

@@ -1,4 +1,4 @@
-// Seleção musical com as entradas anteriores preservadas.
+// Cada seleção completa participa do sorteio como um único bloco.
 window.RadioMusicTracks = [
   {
     "type": "music",
@@ -338,32 +338,26 @@ window.RadioMusicTracks = [
   },
   {
     "type": "music",
-    "title": "Pra Se Emocionar — 1987 — Parte 1",
+    "title": "Seleção de sucessos — Mix completo",
+    "artist": "Alanis Morissette",
+    "src": "media/selecoes/alanis-completo.m4a",
+    "duration": 6859.522902,
+    "streamed": true
+  },
+  {
+    "type": "music",
+    "title": "Pra Se Emocionar — 1987",
     "artist": "Seleção internacional • Teclides Filho",
-    "src": "media/pra-se-emocionar-1987-parte-1.mp3"
+    "src": "media/selecoes/emocionar1987-completo.m4a",
+    "duration": 4529.679093,
+    "streamed": true
   },
   {
     "type": "music",
-    "title": "Pra Se Emocionar — 1987 — Parte 2",
-    "artist": "Seleção internacional • Teclides Filho",
-    "src": "media/pra-se-emocionar-1987-parte-2.mp3"
-  },
-  {
-    "type": "music",
-    "title": "Seleção de sucessos — Parte 1",
-    "artist": "Alanis Morissette",
-    "src": "media/alanis-morissette-mix-parte-1.mp3"
-  },
-  {
-    "type": "music",
-    "title": "Seleção de sucessos — Parte 2",
-    "artist": "Alanis Morissette",
-    "src": "media/alanis-morissette-mix-parte-2.mp3"
-  },
-  {
-    "type": "music",
-    "title": "Seleção de sucessos — Parte 3",
-    "artist": "Alanis Morissette",
-    "src": "media/alanis-morissette-mix-parte-3.mp3"
+    "title": "Seleção 89",
+    "artist": "Maratona Rock n’ Roll • DJ São",
+    "src": "media/selecoes/selecao89-completo.m4a",
+    "duration": 4692.822109,
+    "streamed": true
   }
 ];
