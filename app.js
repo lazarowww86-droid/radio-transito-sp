@@ -82,7 +82,8 @@ const programming = window.RadioProgramming.create(
   musicTracks.map((_, i) => i),
   podcasts.map((track, i) => ({index: musicTracks.length + i, duration: track.duration})),
   Math.random,
-  audiobooks.map((track, i) => ({index: musicTracks.length + podcasts.length + i, duration: track.duration, weekday:track.weekday, minute:track.minute}))
+  audiobooks.map((track, i) => ({index: musicTracks.length + podcasts.length + i, duration: track.duration, weekday:track.weekday, minute:track.minute})),
+  {sequence: ['media/selecoes/alanis-completo.m4a', 'media/selecoes/emocionar1987-completo.m4a', 'media/selecoes/selecao89-completo.m4a'].map(src => musicTracks.findIndex(track => track.src === src)).filter(index => index >= 0)}
 );
 
 // O estado do botão representa a intenção do ouvinte, inclusive durante avisos.
@@ -1267,6 +1268,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 

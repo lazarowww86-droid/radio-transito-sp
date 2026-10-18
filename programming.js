@@ -10,20 +10,24 @@ function local(now = Date.now()) {
   return { date: `${p.year}-${p.month}-${p.day}`, day: Math.floor(Date.UTC(+p.year, +p.month - 1, +p.day) / 86400000),
     seconds: +p.hour * 3600 + +p.minute * 60 + +p.second };
 }
-function create(music, podcasts, random = Math.random, weekly = []) {
+function create(music, podcasts, random = Math.random, weekly = [], options = {}) {
   if (!music.length || !podcasts.length) throw new Error('Programação vazia');
+  // As seleções formam um bloco fixo; apenas as músicas avulsas são embaralhadas.
+  const sequence = [...new Set(options.sequence || [])].filter(index => music.includes(index));
+  const sequenceSet = new Set(sequence);
+  const singles = music.filter(index => !sequenceSet.has(index));
   let queue = [], history = [], cursor = -1, last = null;
   const seen = new Set();
   function fill(count) {
     while (queue.length < count) {
-      const bag = music.slice();
+      const bag = singles.slice();
       for (let i = bag.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
         [bag[i], bag[j]] = [bag[j], bag[i]];
       }
       const before = queue.length ? queue[queue.length - 1] : last;
       if (bag.length > 1 && bag[0] === before) [bag[0], bag[1]] = [bag[1], bag[0]];
-      queue.push(...bag);
+      queue.push(...sequence, ...bag);
     }
   }
   function next() {
@@ -86,4 +90,5 @@ const api = { create, local, SLOTS };
 if (typeof module === 'object' && module.exports) module.exports = api;
 else global.RadioProgramming = api;
 })(typeof window === 'object' ? window : globalThis);
+
 
