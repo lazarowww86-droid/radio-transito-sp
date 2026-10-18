@@ -42,7 +42,8 @@ const podcasts = [
 ];
 const musicTracks = window.RadioMusicTracks;
 const audiobooks = [
- {type:'audiobook',title:'O Idiota — Resumo',artist:'Fiódor Dostoiévski • Audiobooks — Resumos',src:'media/o-idiota-resumo.mp3',duration:1199.986939,weekday:1,minute:750}
+ {type:'audiobook',title:'O Idiota — Resumo',artist:'Fiódor Dostoiévski • Audiobooks — Resumos',src:'media/o-idiota-resumo.mp3',duration:1199.986939,weekday:1,minute:750},
+ {type:'audiobook',title:'Duas Viagens ao Brasil — Resumo',artist:'Hans Staden • Audiobooks — Resumos',src:'media/hans-staden-duas-viagens-resumo.mp3',duration:1500.029388,weekday:2,minute:750}
 ];
 const playlist = [...musicTracks, ...podcasts, ...audiobooks];
 const programming = window.RadioProgramming.create(
@@ -1174,6 +1175,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 

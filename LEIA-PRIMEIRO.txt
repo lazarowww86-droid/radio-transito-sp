@@ -1,12 +1,18 @@
-ALANIS MORISSETTE — ENVIO 3 DE 3
+HANS STADEN — DUAS VIAGENS AO BRASIL
 
-AGUARDE TER OS TRÊS PACOTES E ENVIE NA ORDEM.
-Extraia este ZIP. Não envie o arquivo ZIP fechado.
-Na raiz do repositório radio-transito-sp, envie a pasta media deste pacote e confirme em Commit changes. Não apague os áudios existentes.
-Neste terceiro envio, inclua também music-tracks.js, index.html e sw.js na raiz, substituindo os mesmos nomes. Só este envio atualiza o cadastro para as três novas partes.
+1. Extraia o ZIP. Não envie o ZIP fechado.
+2. Na raiz do repositório radio-transito-sp no GitHub, envie app.js, index.html e sw.js, substituindo os mesmos nomes.
+3. Envie também a pasta media deste pacote, que contém apenas o novo MP3. Preserve os áudios existentes.
+4. Confirme em Commit changes e aguarde a publicação.
+Não precisa alterar artesp, music-tracks.js nem programming.js.
 
-MP3 estéreo, 80 kbps, 44100 Hz, gerado diretamente do arquivo original. Ainda há compressão, com mais qualidade que a versão mono de 24 kbps.
-Três partes de aproximadamente 38 minutos e 23 MB cada. As partes entram separadamente na seleção aleatória, sem garantia de ordem consecutiva. Como se trata de um mix contínuo, as divisões podem acontecer durante músicas.
+Terças-feiras, às 12h30, horário de Brasília.
+Audiobook: Duas Viagens ao Brasil — Resumo / Hans Staden.
+Duração aproximada de 25 minutos, com retorno à programação musical ao terminar. Não entra no sorteio musical.
+Chamada na página: Embarque numa viagem ao Brasil do século XVI. Uma história de encontros, perigos e sobrevivência — reserve seu lugar nessa viagem.
+A chamada é visual, como a de O Idiota; não inclui vinheta de áudio nova.
 
-A entrada antiga do mix da Alanis é substituída no cadastro pelas três partes novas. O arquivo antigo media/Alanis-Morissette-Mix-GitHub.mp3 pode continuar no GitHub; deixa de ser usado.
-As duas partes de 1987, as músicas anteriores, os podcasts e O Idiota foram preservados. app.js, programming.js e artesp não são alterados.
+MP3 estéreo de 112 kbps, gerado do original, cerca de 21 MB. Há compressão para caber no envio, mantendo o áudio inteiro.
+O podcast mais longo das 12h termina antes das 12h20, sem conflito com o horário das 12h30. O Idiota permanece às segundas às 12h30.
+Os mixes da Alanis e de 1987 e as demais músicas permanecem cadastrados como estão no GitHub. Não foram alteradas as rotinas de reprodução, voz e boletins.
+52 testes automatizados passaram. Sem teste físico no Samsung.
