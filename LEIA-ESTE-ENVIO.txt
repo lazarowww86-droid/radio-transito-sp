@@ -1,2 +1,2 @@
-ENVIO 06 DE 14
+ENVIO 07 DE 14
 Extraia o ZIP e envie apenas a pasta media na raiz do GitHub. Preserve a subpasta selecoes e os nomes dos arquivos. Confirme em Commit changes antes do próximo envio. Não envie o ZIP fechado. Não apague os áudios existentes. Faça o envio 14 somente depois de todos os 13 pacotes de áudio.
