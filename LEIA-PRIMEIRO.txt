@@ -1,6 +1,12 @@
-MIX 1987 — ENVIO 2 DE 2
+ALANIS MORISSETTE — ENVIO 1 DE 3
 
-Extraia este ZIP no computador. Não envie o ZIP fechado.
-Abra a raiz do repositório radio-transito-sp no GitHub.
-Após confirmar o envio 1, envie a pasta media deste segundo pacote e os arquivos music-tracks.js, index.html e sw.js para a raiz do repositório. Confirme em Commit changes novamente.
-Não apague os outros áudios e não envie os dois pacotes juntos. Cada envio contém somente um MP3 de aproximadamente 22,6 MB. A qualidade estéreo de 80 kbps foi mantida. Não precisa alterar artesp.
+AGUARDE TER OS TRÊS PACOTES E ENVIE NA ORDEM.
+Extraia este ZIP. Não envie o arquivo ZIP fechado.
+Na raiz do repositório radio-transito-sp, envie a pasta media deste pacote e confirme em Commit changes. Não apague os áudios existentes.
+Depois de confirmar este envio, faça o próximo. O cadastro só será atualizado no envio 3.
+
+MP3 estéreo, 80 kbps, 44100 Hz, gerado diretamente do arquivo original. Ainda há compressão, com mais qualidade que a versão mono de 24 kbps.
+Três partes de aproximadamente 38 minutos e 23 MB cada. As partes entram separadamente na seleção aleatória, sem garantia de ordem consecutiva. Como se trata de um mix contínuo, as divisões podem acontecer durante músicas.
+
+A entrada antiga do mix da Alanis é substituída no cadastro pelas três partes novas. O arquivo antigo media/Alanis-Morissette-Mix-GitHub.mp3 pode continuar no GitHub; deixa de ser usado.
+As duas partes de 1987, as músicas anteriores, os podcasts e O Idiota foram preservados. app.js, programming.js e artesp não são alterados.
