@@ -1,9 +1,9 @@
-ALANIS MORISSETTE — ENVIO 2 DE 3
+ALANIS MORISSETTE — ENVIO 3 DE 3
 
 AGUARDE TER OS TRÊS PACOTES E ENVIE NA ORDEM.
 Extraia este ZIP. Não envie o arquivo ZIP fechado.
 Na raiz do repositório radio-transito-sp, envie a pasta media deste pacote e confirme em Commit changes. Não apague os áudios existentes.
-Depois de confirmar este envio, faça o próximo. O cadastro só será atualizado no envio 3.
+Neste terceiro envio, inclua também music-tracks.js, index.html e sw.js na raiz, substituindo os mesmos nomes. Só este envio atualiza o cadastro para as três novas partes.
 
 MP3 estéreo, 80 kbps, 44100 Hz, gerado diretamente do arquivo original. Ainda há compressão, com mais qualidade que a versão mono de 24 kbps.
 Três partes de aproximadamente 38 minutos e 23 MB cada. As partes entram separadamente na seleção aleatória, sem garantia de ordem consecutiva. Como se trata de um mix contínuo, as divisões podem acontecer durante músicas.

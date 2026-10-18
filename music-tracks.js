@@ -338,12 +338,6 @@ window.RadioMusicTracks = [
   },
   {
     "type": "music",
-    "title": "Seleção de sucessos — Mix completo",
-    "artist": "Alanis Morissette",
-    "src": "media/Alanis-Morissette-Mix-GitHub.mp3"
-  },
-  {
-    "type": "music",
     "title": "Pra Se Emocionar — 1987 — Parte 1",
     "artist": "Seleção internacional • Teclides Filho",
     "src": "media/pra-se-emocionar-1987-parte-1.mp3"
@@ -353,5 +347,23 @@ window.RadioMusicTracks = [
     "title": "Pra Se Emocionar — 1987 — Parte 2",
     "artist": "Seleção internacional • Teclides Filho",
     "src": "media/pra-se-emocionar-1987-parte-2.mp3"
+  },
+  {
+    "type": "music",
+    "title": "Seleção de sucessos — Parte 1",
+    "artist": "Alanis Morissette",
+    "src": "media/alanis-morissette-mix-parte-1.mp3"
+  },
+  {
+    "type": "music",
+    "title": "Seleção de sucessos — Parte 2",
+    "artist": "Alanis Morissette",
+    "src": "media/alanis-morissette-mix-parte-2.mp3"
+  },
+  {
+    "type": "music",
+    "title": "Seleção de sucessos — Parte 3",
+    "artist": "Alanis Morissette",
+    "src": "media/alanis-morissette-mix-parte-3.mp3"
   }
 ];
