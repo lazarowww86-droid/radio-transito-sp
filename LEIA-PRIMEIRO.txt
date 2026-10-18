@@ -1,10 +1,7 @@
-CONTROLE DE VOLUME DA RÁDIO
+AJUSTE VISUAL DO VOLUME
 
-Extraia o ZIP e envie os quatro arquivos app.js, index.html, styles.css e sw.js na raiz do repositório radio-transito-sp no GitHub, substituindo os mesmos nomes. Confirme em Commit changes e aguarde a publicação.
-Não precisa enviar media, music-tracks.js, programming.js nem artesp.
+Extraia e envie styles.css, index.html e sw.js na raiz do GitHub, substituindo os mesmos nomes. Confirme em Commit changes.
+Não precisa enviar app.js, media, artesp nem outros arquivos.
 
-Controles de volume abaixo do botão Ouvir: menos, percentual e mais. Cada toque ajusta 10%, de zero a cem. O nível escolhido é salvo no navegador.
-O volume é aplicado aos dois players da programação e ao áudio dos boletins. As novas falas sintetizadas também recebem o nível escolhido; o comportamento da voz já em andamento depende do navegador. O volume do aparelho continua valendo como limite geral.
-
-Foram preservados os horários, os dois audiobooks, as músicas e as rotinas de reprodução e recuperação. A mudança no app.js se limita ao controle de volume e ao nível das novas falas.
-55 testes automatizados passaram, incluindo os testes anteriores de reprodução e os novos de volume e troca de faixa. Sem teste físico no Samsung.
+Corrige o estilo ausente do pacote anterior: controle em formato de cápsula, botões circulares escuros e símbolos turquesa, acompanhando o visual da rádio. O comportamento do volume permanece igual.
+A versão dos arquivos foi atualizada para carregar o novo estilo. Aguarde a publicação e reabra a rádio.

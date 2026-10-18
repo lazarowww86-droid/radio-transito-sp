@@ -12,3 +12,15 @@
 /* Boletins públicos das rodovias. */
 .roads-panel{margin-top:2rem}.roads-actions{display:flex;gap:1rem;flex-wrap:wrap;margin:1.5rem 0}.roads-actions button{padding:1rem 1.4rem;border:1px solid #35d1c777;border-radius:16px;background:#10d4bc10;color:#46ded1;font:inherit;font-weight:700;cursor:pointer}.roads-actions button:disabled{opacity:.5;cursor:default}.roads-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:1rem}.roads-item{padding:1.3rem;border:1px solid #ffffff12;border-radius:20px;background:#05172255;min-width:0;overflow-wrap:anywhere}.roads-item h3{font-size:1.1rem;line-height:1.5;margin:.7rem 0}.roads-item p,.roads-source-status,#roads-status{color:#9db4c3;line-height:1.6}.roads-item small{color:#46ded1}.roads-item a{color:#46ded1}.roads-item p{margin-bottom:.8rem}
 
+
+/* Controle de volume integrado ao player. */
+.volume-controls{display:flex;align-items:center;justify-content:center;gap:10px;width:fit-content;max-width:100%;margin:18px auto 10px;padding:7px 10px 7px 16px;border:1px solid #29d9c825;border-radius:999px;background:#0b202dc9;box-shadow:inset 0 1px 0 #ffffff05}
+.volume-controls>span{font-size:10px;font-weight:700;letter-spacing:1.4px;color:#91adbc;margin-right:3px}
+.volume-controls button{-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;min-height:44px;margin:0;padding:0;border:1px solid #23d8c52b;border-radius:50%;background:#12333e;color:#25dfcb;font-family:inherit;font-size:25px;font-weight:500;line-height:1;box-shadow:none;cursor:pointer;touch-action:manipulation;transition:background .15s,border-color .15s}
+.volume-controls button:hover:not(:disabled){background:#18444e;border-color:#25dfcb80}
+.volume-controls button:active:not(:disabled){background:#1b535b}
+.volume-controls button:disabled{opacity:.38;cursor:default}
+.volume-controls button:focus-visible{outline:2px solid #25dfcb;outline-offset:3px}
+.volume-controls output{display:inline-block;min-width:44px;text-align:center;font-size:13px;font-weight:700;color:#d7eff5;font-variant-numeric:tabular-nums}
+@media(max-width:380px){.volume-controls{gap:7px;padding-left:12px}.volume-controls>span{font-size:9px;letter-spacing:1px}}
+
