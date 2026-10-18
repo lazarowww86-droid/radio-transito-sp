@@ -1,7 +1,6 @@
-MIX 1987 — ENVIO 1 DE 2
+MIX 1987 — ENVIO 2 DE 2
 
 Extraia este ZIP no computador. Não envie o ZIP fechado.
 Abra a raiz do repositório radio-transito-sp no GitHub.
-Envie apenas a pasta media deste primeiro pacote. Ela contém o MP3 da parte 1. Confirme em Commit changes.
-Depois abra o segundo pacote e faça o segundo envio.
+Após confirmar o envio 1, envie a pasta media deste segundo pacote e os arquivos music-tracks.js, index.html e sw.js para a raiz do repositório. Confirme em Commit changes novamente.
 Não apague os outros áudios e não envie os dois pacotes juntos. Cada envio contém somente um MP3 de aproximadamente 22,6 MB. A qualidade estéreo de 80 kbps foi mantida. Não precisa alterar artesp.

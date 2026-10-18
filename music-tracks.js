@@ -1,4 +1,4 @@
-// Seleção musical: 57 músicas, com as anteriores preservadas.
+// Seleção musical com as entradas anteriores preservadas.
 window.RadioMusicTracks = [
   {
     "type": "music",
@@ -337,9 +337,21 @@ window.RadioMusicTracks = [
     "src": "media/musicas3-20.mp3"
   },
   {
-      "type": "music",
-      "title": "Seleção de sucessos — Mix completo",
-      "artist": "Alanis Morissette",
-      "src": "media/Alanis-Morissette-Mix-GitHub.mp3"
+    "type": "music",
+    "title": "Seleção de sucessos — Mix completo",
+    "artist": "Alanis Morissette",
+    "src": "media/Alanis-Morissette-Mix-GitHub.mp3"
+  },
+  {
+    "type": "music",
+    "title": "Pra Se Emocionar — 1987 — Parte 1",
+    "artist": "Seleção internacional • Teclides Filho",
+    "src": "media/pra-se-emocionar-1987-parte-1.mp3"
+  },
+  {
+    "type": "music",
+    "title": "Pra Se Emocionar — 1987 — Parte 2",
+    "artist": "Seleção internacional • Teclides Filho",
+    "src": "media/pra-se-emocionar-1987-parte-2.mp3"
   }
 ];
