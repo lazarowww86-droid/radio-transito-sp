@@ -1,26 +1,7 @@
-RÁDIO TRÂNSITO SP — O IDIOTA
+MIX 1987 — ENVIO 1 DE 2
 
-COMO ENVIAR
-1. Extraia este ZIP no computador. Não envie o ZIP fechado.
-2. Abra a raiz do repositório radio-transito-sp no GitHub.
-3. Envie app.js, programming.js, index.html e sw.js, mantendo estes nomes e substituindo os arquivos existentes.
-4. Envie também a pasta media deste pacote a partir da raiz do repositório. Ela contém somente o novo áudio. Preserve todos os outros arquivos da pasta media já existente.
-5. Confirme em Commit changes e aguarde a publicação do GitHub Pages.
-Não é necessário enviar nem alterar a pasta artesp.
-
-PROGRAMAÇÃO
-Audiobooks — Resumos: O Idiota, de Fiódor Dostoiévski.
-Toda segunda-feira, às 12h30, no horário de Brasília.
-Áudio completo de aproximadamente 20 minutos, com 19,2 MB, sem nova compressão.
-O resumo não entra no sorteio musical. Ao terminar, a programação musical retorna.
-Quem entrar durante o horário do resumo acompanha a posição correspondente.
-A página recebe uma chamada visível para Audiobooks — Resumos.
-
-VERIFICAÇÃO DE HORÁRIOS
-Os podcasts continuam às 06h30, 12h00 e 18h30.
-Mesmo o maior dos quatro podcasts das 12h00 termina antes das 12h20, sem conflito com o resumo das 12h30.
-As 57 músicas e a seleção musical foram preservadas; music-tracks.js não precisa ser reenviado.
-As rotinas de voz, boletins e recuperação de áudio foram preservadas.
-
-VALIDAÇÃO
-57 testes automatizados passaram, incluindo horário de Brasília, repetição semanal, ausência de conflito, retorno à música e regressões de reprodução e voz. Não houve teste físico no Samsung.
+Extraia este ZIP no computador. Não envie o ZIP fechado.
+Abra a raiz do repositório radio-transito-sp no GitHub.
+Envie apenas a pasta media deste primeiro pacote. Ela contém o MP3 da parte 1. Confirme em Commit changes.
+Depois abra o segundo pacote e faça o segundo envio.
+Não apague os outros áudios e não envie os dois pacotes juntos. Cada envio contém somente um MP3 de aproximadamente 22,6 MB. A qualidade estéreo de 80 kbps foi mantida. Não precisa alterar artesp.
