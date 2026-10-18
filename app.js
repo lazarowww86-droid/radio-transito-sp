@@ -1028,6 +1028,7 @@ const DEFAULT_FEED_URL = 'https://radio-transito-sp.lazarowww86.workers.dev/bole
 const feedURL = DEFAULT_FEED_URL;
 let feedRequest = 0, feedController = null;
 let feedLoading = false, feedError = '', timestampKind = '';
+let pendingTraffic = false, automaticTrafficRunning = false;
 
 function feedFresh() {
   const age = Date.now() - Date.parse(updated);
@@ -1099,6 +1100,7 @@ async function trafficBulletin() {
     if (!canSpeak()) $('traffic-status').textContent = 'A leitura por voz não está disponível neste navegador.';
     return;
   }
+  pendingTraffic = false;
   try {
     if (!isMobile) {
       await playSting('media/vinheta-transito-mix.mp3', job);
@@ -1113,10 +1115,19 @@ async function trafficBulletin() {
 
 $('speak').addEventListener('click', trafficBulletin);$('refresh').addEventListener('click', refresh);
 refresh();
+function flushAutomaticTraffic() {
+  if (!wanted) { pendingTraffic = false; return; }
+  if (!pendingTraffic || automaticTrafficRunning || announcement || pendingPlay || current.paused || current.readyState < 2) return;
+  if (!feedFresh()) { pendingTraffic = false; return; }
+  automaticTrafficRunning = true;
+  trafficBulletin().catch(() => {}).finally(() => { automaticTrafficRunning = false; });
+}
 setInterval(async () => {
   const fresh = await refresh();
-  if (fresh && wanted && !current.paused && !announcement) trafficBulletin();
+  if (fresh && wanted) pendingTraffic = true;
+  flushAutomaticTraffic();
 }, 15 * 60 * 1000);
+setInterval(flushAutomaticTraffic, 5000);
 setInterval(report, 60000);
 
 // A hora da rádio é a de São Paulo, independentemente do fuso do dispositivo.
@@ -1124,7 +1135,7 @@ const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
 });
-let lastTimeSlot = '';
+let lastTimeSlot = '', observedTimePeriod = '', pendingTime = false;
 function radioTime(date = new Date()) {
   return Object.fromEntries(timeFormatter.formatToParts(date).map(part => [part.type, part.value]));
 }
@@ -1136,14 +1147,15 @@ function timeText(parts) {
 function checkTimeAnnouncement() {
   announcement?.audioCheck?.();
   window.RadioDiagnostics?.record('scheduler', {wanted, paused:current.paused, pendingPlay, ready:current.readyState, announcement:announcement?.kind || null, position:current.currentTime});
-  if (!wanted || current.paused || pendingPlay || current.readyState < 2 || announcement) return;
   const parts = radioTime();
-  if (Number(parts.minute) % 10 !== 0) return;
-  const slot = `${parts.year}-${parts.month}-${parts.day}-${parts.hour}-${parts.minute}`;
-  if (slot === lastTimeSlot) return;
+  const slot = `${parts.year}-${parts.month}-${parts.day}-${parts.hour}-${Math.floor(Number(parts.minute) / 10)}`;
+  if (!wanted) { observedTimePeriod = slot; pendingTime = false; return; }
+  if ((observedTimePeriod && observedTimePeriod !== slot) || (Number(parts.minute) % 10 === 0 && slot !== lastTimeSlot)) pendingTime = true;
+  observedTimePeriod = slot;
+  if (!pendingTime || current.paused || pendingPlay || current.readyState < 2 || announcement) return;
   const job = beginAnnouncement('time');
   if (!job) return;
-  lastTimeSlot = slot;
+  lastTimeSlot = slot; pendingTime = false;
   speakText(timeText(parts), job).finally(() => finishAnnouncement(job));
 }
 function tick() {
@@ -1268,6 +1280,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 

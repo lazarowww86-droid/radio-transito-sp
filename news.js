@@ -111,11 +111,8 @@ function create(hooks) {
     if (!hooks.isListening()) { nextAt = null; waitingSince = null; return; }
     if (nextAt === null) { nextAt = Date.now() + INTERVAL; return; }
     if (Date.now() < nextAt || busy) return;
-    if (!hooks.canAnnounce(false)) {
-      waitingSince ||= Date.now();
-      if (Date.now() - waitingSince < 5 * 60000) return;
-      waitingSince = null; nextAt = Date.now() + INTERVAL; return;
-    }
+    // Conserva o horário vencido até a voz ficar livre, sem descartar a rodada.
+    if (!hooks.canAnnounce(false)) return;
     waitingSince = null; nextAt = Date.now() + INTERVAL;
     bulletin(false).catch(() => {});
   }
@@ -127,3 +124,4 @@ function create(hooks) {
 }
 global.RadioNews = { create, parse, validItem };
 })(window);
+

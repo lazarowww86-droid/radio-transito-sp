@@ -1,4 +1,4 @@
-const BUILD = '20261018-r53-ordem-selecoes';
+const BUILD = '20261018-r54-agendamento-avisos';
 const MEDIA_BUILD = '20261013-r2-light';
 importScripts(`./album-streams.js?v=${BUILD}`);
 self.addEventListener('message', event => {
@@ -99,6 +99,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(serveShell(request));
   }
 });
+
 
 
 

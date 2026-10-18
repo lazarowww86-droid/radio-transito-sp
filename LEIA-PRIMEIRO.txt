@@ -1,27 +1,32 @@
-CORREÇÃO DA ORDEM DAS SELEÇÕES — NÃO REENVIE OS ÁUDIOS
+REVISÃO DOS AVISOS E HORÁRIOS
 
-Você enviou os arquivos de áudio corretamente. O erro estava no código: as seleções completas ainda eram sorteadas junto das músicas avulsas.
+COMO ENVIAR
+Extraia este ZIP e envie app.js, news.js, index.html e sw.js na raiz do repositório radio-transito-sp, substituindo os mesmos nomes. Confirme em Commit changes, aguarde a publicação e feche/reabra a rádio.
+Não precisa reenviar media, artesp, programming.js, music-tracks.js, styles.css nem album-streams.js.
 
-Extraia este ZIP e envie SOMENTE estes quatro arquivos na raiz do repositório radio-transito-sp, substituindo os mesmos nomes:
-app.js
-programming.js
-index.html
-sw.js
-Confirme em Commit changes. Aguarde a publicação do GitHub Pages e feche/reabra a rádio para carregar a nova programação.
-Não precisa enviar media, music-tracks.js, album-streams.js, styles.css nem artesp.
-Não apague os áudios que já subiu.
+FALHAS REPRODUZIDAS E CORRIGIDAS
+1. Hora certa: se outro aviso ocupasse o minuto de disparo, a hora podia ser perdida. Agora conserva a pendência e informa a hora atual quando a voz fica livre. Também identifica a passagem para um novo período após atraso de timers. Não acumula várias horas antigas para ler juntas.
+2. Notícias: após cinco minutos aguardando outra leitura, a rodada podia ser descartada e adiada por mais trinta minutos. Agora aguarda a voz ficar livre sem descartar essa rodada.
+3. Trânsito automático: uma consulta de quinze minutos coincidente com outra leitura podia perder a transmissão. Agora conserva a pendência, revalida a atualidade dos dados e aguarda a liberação da voz.
 
-ORDEM CORRIGIDA
-1. Alanis Morissette — seleção completa.
-2. Pra Se Emocionar — 1987 — seleção completa.
-3. Seleção 89 — seleção completa, com vinheta falada na abertura.
-4. As 56 músicas avulsas continuam aleatórias, sem repetição até completar a seleção.
-Depois o ciclo começa novamente pelas três seleções na mesma ordem.
-Cada abertura nova da rádio começa na Alanis, exceto quando houver um podcast ou audiobook no horário fixo. Pausar e continuar na mesma sessão mantém o ponto atual.
-Os botões Anterior e Próximo também respeitam essa fila.
-Os boletins e os horários fixos dos podcasts e audiobooks continuam como antes.
+CADÊNCIA CONFERIDA
+Hora certa: minutos 00, 10, 20, 30, 40 e 50, no fuso de São Paulo; se houver atraso, fala a hora atual depois.
+Previsão do tempo: intervalo de 30 minutos, para São Paulo e Guarulhos.
+Notícias: intervalo de 30 minutos, somente manchetes válidas e ainda não lidas automaticamente.
+Boletim de trânsito: consulta automática de 15 minutos, com fonte recente e horário confirmado.
+Painel de rodovias: intervalo de 15 minutos, para novidades válidas; não repete automaticamente itens já lidos.
+Podcasts: 06h30, 12h00 e 18h30; um episódio por dia, repetido nesses horários.
+O Idiota: segundas-feiras às 12h30, aproximadamente 20 minutos.
+Hans Staden: terças-feiras às 12h30, aproximadamente 25 minutos.
+Todos os horários fixos seguem America/Sao_Paulo. O podcast mais longo das 12h termina antes das 12h20, sem conflito com os audiobooks das 12h30.
+Após 18h, o painel de previsão usa mínima e máxima de amanhã, como já estava configurado.
+
+FONTES E LIMITES
+Nesta revisão, as consultas ao vivo retornaram previsão válida para as duas cidades, oito manchetes aceitas pelo código, resposta do painel rodoviário e áudio válido na rota de voz. Renovias e Mobilidade Sampa estavam sem boletim recente; isso não representa falha do agendador.
+A ausência de novidades ou uma fonte desatualizada pode impedir um boletim automático; o código não deve inventar um aviso nem afirmar trânsito livre com fonte indisponível.
 
 VALIDAÇÃO
-66 testes automatizados passaram, incluindo a ordem no player, transições por término, Anterior/Próximo, repetição do ciclo, músicas avulsas, voz, retomada, volume e horários.
-As rotinas de áudio e voz do app.js não foram alteradas nesta correção; apenas a configuração da fila.
-Não houve teste físico no Samsung nesta etapa.
+Os três testes de colisão falharam na versão publicada e passaram após as correções.
+76 testes automatizados passaram no total, incluindo ordem das seleções, audiobooks, retorno à música, voz, volume, agendamento, fuso, meia-noite, períodos sem repetição e avisos pendentes.
+As rotinas de voz e de retomada musical foram preservadas. A ordem Alanis → 1987 → Seleção 89 e os horários fixos foram preservados.
+Não houve teste físico no Samsung. Timers suspensos pelo sistema só podem executar quando o navegador os liberar; a revisão não garante execução contínua em todo estado de suspensão do aparelho.
