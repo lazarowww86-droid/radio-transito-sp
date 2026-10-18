@@ -1,4 +1,4 @@
-const BUILD = '20261018-r49-hans-staden';
+const BUILD = '20261018-r50-volume';
 const MEDIA_BUILD = '20261013-r2-light';
 const PREFIX = 'radio-transito-sp-';
 const SCOPE = encodeURIComponent(new URL(self.registration.scope).pathname);
@@ -92,6 +92,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(serveShell(request));
   }
 });
+
 
 
 

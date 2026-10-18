@@ -1,18 +1,10 @@
-HANS STADEN — DUAS VIAGENS AO BRASIL
+CONTROLE DE VOLUME DA RÁDIO
 
-1. Extraia o ZIP. Não envie o ZIP fechado.
-2. Na raiz do repositório radio-transito-sp no GitHub, envie app.js, index.html e sw.js, substituindo os mesmos nomes.
-3. Envie também a pasta media deste pacote, que contém apenas o novo MP3. Preserve os áudios existentes.
-4. Confirme em Commit changes e aguarde a publicação.
-Não precisa alterar artesp, music-tracks.js nem programming.js.
+Extraia o ZIP e envie os quatro arquivos app.js, index.html, styles.css e sw.js na raiz do repositório radio-transito-sp no GitHub, substituindo os mesmos nomes. Confirme em Commit changes e aguarde a publicação.
+Não precisa enviar media, music-tracks.js, programming.js nem artesp.
 
-Terças-feiras, às 12h30, horário de Brasília.
-Audiobook: Duas Viagens ao Brasil — Resumo / Hans Staden.
-Duração aproximada de 25 minutos, com retorno à programação musical ao terminar. Não entra no sorteio musical.
-Chamada na página: Embarque numa viagem ao Brasil do século XVI. Uma história de encontros, perigos e sobrevivência — reserve seu lugar nessa viagem.
-A chamada é visual, como a de O Idiota; não inclui vinheta de áudio nova.
+Controles de volume abaixo do botão Ouvir: menos, percentual e mais. Cada toque ajusta 10%, de zero a cem. O nível escolhido é salvo no navegador.
+O volume é aplicado aos dois players da programação e ao áudio dos boletins. As novas falas sintetizadas também recebem o nível escolhido; o comportamento da voz já em andamento depende do navegador. O volume do aparelho continua valendo como limite geral.
 
-MP3 estéreo de 112 kbps, gerado do original, cerca de 21 MB. Há compressão para caber no envio, mantendo o áudio inteiro.
-O podcast mais longo das 12h termina antes das 12h20, sem conflito com o horário das 12h30. O Idiota permanece às segundas às 12h30.
-Os mixes da Alanis e de 1987 e as demais músicas permanecem cadastrados como estão no GitHub. Não foram alteradas as rotinas de reprodução, voz e boletins.
-52 testes automatizados passaram. Sem teste físico no Samsung.
+Foram preservados os horários, os dois audiobooks, as músicas e as rotinas de reprodução e recuperação. A mudança no app.js se limita ao controle de volume e ao nível das novas falas.
+55 testes automatizados passaram, incluindo os testes anteriores de reprodução e os novos de volume e troca de faixa. Sem teste físico no Samsung.

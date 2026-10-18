@@ -11,3 +11,4 @@
 
 /* Boletins públicos das rodovias. */
 .roads-panel{margin-top:2rem}.roads-actions{display:flex;gap:1rem;flex-wrap:wrap;margin:1.5rem 0}.roads-actions button{padding:1rem 1.4rem;border:1px solid #35d1c777;border-radius:16px;background:#10d4bc10;color:#46ded1;font:inherit;font-weight:700;cursor:pointer}.roads-actions button:disabled{opacity:.5;cursor:default}.roads-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:1rem}.roads-item{padding:1.3rem;border:1px solid #ffffff12;border-radius:20px;background:#05172255;min-width:0;overflow-wrap:anywhere}.roads-item h3{font-size:1.1rem;line-height:1.5;margin:.7rem 0}.roads-item p,.roads-source-status,#roads-status{color:#9db4c3;line-height:1.6}.roads-item small{color:#46ded1}.roads-item a{color:#46ded1}.roads-item p{margin-bottom:.8rem}
+

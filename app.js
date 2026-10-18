@@ -2,6 +2,38 @@
 'use strict';
 const $ = id => document.getElementById(id);
 
+// Volume único para os dois players e o áudio dos boletins.
+const radioVolume = (() => {
+  const key = 'radio-transito-sp-volume';
+  let value = 1;
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved !== null && saved !== '' && Number.isFinite(Number(saved))) value = Math.max(0, Math.min(1, Number(saved)));
+  } catch (_) {}
+  const apply = () => {
+    for (const id of ['audio', 'audio-next', 'bulletin-audio']) {
+      const audio = $(id);
+      if (audio) { try { audio.volume = value; } catch (_) {} }
+    }
+    const label = $('volume-level');
+    if (label) label.textContent = Math.round(value * 100) + '%';
+    const down = $('volume-down'), up = $('volume-up');
+    if (down) down.disabled = value === 0;
+    if (up) up.disabled = value === 1;
+  };
+  const change = delta => {
+    value = Math.max(0, Math.min(1, Math.round((value + delta) * 10) / 10));
+    apply();
+    try { localStorage.setItem(key, String(value)); } catch (_) {}
+  };
+  const down = $('volume-down'), up = $('volume-up');
+  if (down) down.addEventListener('click', () => change(-0.1));
+  if (up) up.addEventListener('click', () => change(0.1));
+  apply();
+  return {get: () => value};
+})();
+
+
 // Cache rápido em memória (2 min) para que o clique no telemóvel não espere pela rede antes de falar
 if (typeof window.fetch === 'function') {
   const nativeFetch = window.fetch.bind(window);
@@ -731,6 +763,7 @@ function speakNative(clean, job) {
     job.utterance = utterance;
     utterance.lang = 'pt-BR';
     utterance.rate = 1;
+    utterance.volume = radioVolume.get();
 
     if (!isMobile || (job.kind === 'weather' && weatherVoiceName)) {
       const voice = selectedVoice(job.kind);
@@ -1175,6 +1208,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 }
 
 })();
+
 
 
 
